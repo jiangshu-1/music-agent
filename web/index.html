@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#050706">
+    <title>Claudio</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Personal AI Radio</p>
+          <h1>Claudio</h1>
+        </div>
+        <div class="status" id="status">local</div>
+      </header>
+
+      <section class="deck" aria-label="播放器">
+        <div class="cover" id="cover">
+          <div class="needle"></div>
+        </div>
+        <div class="track">
+          <p class="label">Now Playing</p>
+          <h2 id="title">Loading</h2>
+          <p id="artist">...</p>
+          <div class="meter" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="controls" aria-label="播放控制">
+        <button class="icon-button" id="prev" type="button" title="上一首">‹</button>
+        <button class="play-button" id="play" type="button" title="播放或暂停">▶</button>
+        <button class="icon-button" id="next" type="button" title="下一首">›</button>
+      </section>
+
+      <section class="feedback" aria-label="反馈">
+        <button id="like" type="button" data-feedback="like">like</button>
+        <button id="skip" type="button" data-feedback="skip">skip</button>
+        <button id="badFit" type="button" data-feedback="bad-fit">bad fit</button>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <p class="label">DJ Dispatch</p>
+          <div class="panel-actions">
+            <button id="cast" type="button" title="Cast to UPnP speaker">cast</button>
+            <button id="voice" type="button">speak</button>
+          </div>
+        </div>
+        <p class="dispatch" id="dispatch">说一句你现在的状态，Claudio 会安排下一首。</p>
+      </section>
+
+      <section class="chat">
+        <input id="message" type="text" autocomplete="off" placeholder="比如：我现在有点累，但还要继续工作">
+        <button id="send" type="button">send</button>
+      </section>
+
+      <nav class="tabs" aria-label="视图">
+        <button class="active" data-tab="queue" type="button">Queue</button>
+        <button data-tab="lyrics" type="button">Lyrics</button>
+        <button data-tab="library" type="button">Library</button>
+        <button data-tab="netease" type="button">NetEase</button>
+        <button data-tab="profile" type="button">Profile</button>
+      </nav>
+
+      <section class="view active" id="queueView"></section>
+      <section class="view lyric-view" id="lyricsView"></section>
+      <section class="view library-view" id="libraryView"></section>
+      <section class="view netease-view" id="neteaseView"></section>
+      <section class="view profile-view" id="profileView"></section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

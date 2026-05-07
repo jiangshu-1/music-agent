@@ -1,0 +1,408 @@
+:root {
+  --bg: #0d0f0e;
+  --surface: #141716;
+  --border: #2a2d2c;
+  --fg: #f4ead8;
+  --fg-dim: #949796;
+  --accent: #d85c27; /* 橙色调 */
+  --accent-dim: #6b3117;
+  --safe: #2ecc71;
+  --radius: 4px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Courier New", Courier, monospace; /* 更有手写/极客感 */
+  line-height: 1.5;
+  margin: 0;
+  padding: 0;
+}
+
+.shell {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px dashed var(--border);
+  padding-bottom: 1rem;
+}
+
+.topbar h1 {
+  font-size: 1.5rem;
+  margin: 0;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.eyebrow {
+  font-size: 0.75rem;
+  color: var(--fg-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 0 0 0.2rem;
+}
+
+.status {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+/* 播放器核心部分 */
+.deck {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.cover {
+  width: 140px;
+  height: 140px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  position: relative;
+  transition: transform 0.3s ease;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+.cover.playing {
+  border-color: var(--accent);
+}
+
+.needle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 2px;
+  height: 20px;
+  background: var(--accent);
+  transform-origin: top;
+  transform: rotate(-30deg);
+  transition: transform 0.5s ease;
+}
+
+.playing .needle {
+  transform: rotate(0deg);
+}
+
+.track {
+  flex: 1;
+}
+
+.track h2 {
+  font-size: 1.25rem;
+  margin: 0.2rem 0;
+  line-height: 1.2;
+}
+
+.track p {
+  color: var(--fg-dim);
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.meter {
+  display: flex;
+  gap: 3px;
+  margin-top: 10px;
+  height: 12px;
+  align-items: flex-end;
+}
+
+.meter span {
+  width: 4px;
+  background: var(--accent);
+  border-radius: 1px;
+  height: 20%;
+}
+
+.playing .meter span {
+  animation: bar 0.6s infinite alternate;
+}
+
+@keyframes bar {
+  from { height: 20%; }
+  to { height: 100%; }
+}
+
+/* 按钮样式 */
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: var(--fg);
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+}
+
+.play-button {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-button {
+  font-size: 2rem;
+  color: var(--fg-dim);
+}
+
+.icon-button:hover {
+  color: var(--accent);
+}
+
+.feedback {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.feedback button {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 0.6rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.feedback button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* DJ 播报区域 */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 1rem;
+  position: relative;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 0.8rem;
+}
+
+.label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+}
+
+.dispatch {
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 0;
+  color: var(--fg);
+}
+
+/* 输入框 */
+.chat {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.chat input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  padding: 0.8rem;
+  font-family: inherit;
+}
+
+.chat input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.chat button {
+  background: var(--accent);
+  color: var(--bg);
+  padding: 0 1.2rem;
+  font-weight: bold;
+}
+
+/* 标签页 */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.tabs button {
+  padding: 0.8rem 1.2rem;
+  color: var(--fg-dim);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.tabs button.active {
+  color: var(--accent);
+  border-bottom: 2px solid var(--accent);
+}
+
+.view {
+  display: none;
+}
+
+.view.active {
+  display: block;
+}
+
+/* 列表条目 */
+.song-row {
+  display: flex;
+  gap: 1rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--surface);
+  align-items: center;
+}
+
+.swatch {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+}
+
+.song-row h3 {
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.song-row p {
+  font-size: 0.8rem;
+  color: var(--fg-dim);
+  margin: 0;
+}
+
+.tag-editor {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.tag-editor input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  font-size: 0.7rem;
+  padding: 0.2rem;
+}
+
+.tag-editor button {
+  font-size: 0.7rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.lyric-view {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.lyric-view p {
+  margin: 0.8rem 0;
+  font-size: 1.1rem;
+  color: var(--fg-dim);
+  transition: color 0.3s;
+}
+
+.lyric-view p:hover {
+  color: var(--accent);
+}
+
+.library-note {
+  font-size: 0.8rem;
+  color: var(--fg-dim);
+  margin-bottom: 1rem;
+}
+
+.library-path {
+  display: block;
+  font-family: monospace;
+  background: var(--surface);
+  padding: 0.4rem;
+  margin-top: 0.4rem;
+  word-break: break-all;
+}
+
+.netease-search {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.netease-search input {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  padding: 0.6rem;
+}
+
+.netease-search button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.preference-summary {
+  margin-top: 1.5rem;
+}
+
+.preference-summary pre {
+  white-space: pre-wrap;
+  font-size: 0.85rem;
+  color: var(--accent);
+  line-height: 1.6;
+}
+
+.phone-access {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+}
+
+.phone-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}
+
+pre {
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 0.8rem;
+  color: var(--fg-dim);
+}

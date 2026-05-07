@@ -1,0 +1,5 @@
+{
+  "focus": ["mock-002", "mock-004", "mock-001"],
+  "night": ["mock-003", "mock-005", "mock-001"],
+  "recovery": ["mock-005", "mock-002", "mock-006"]
+}

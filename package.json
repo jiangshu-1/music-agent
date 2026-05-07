@@ -1,0 +1,19 @@
+{
+  "name": "music-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --experimental-sqlite server/index.js",
+    "start": "node --experimental-sqlite server/index.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "NeteaseCloudMusicApi": "^4.31.0",
+    "node-ssdp": "^4.0.1",
+    "upnp-device-client": "^1.0.2",
+    "ws": "^8.20.0"
+  }
+}
