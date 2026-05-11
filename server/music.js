@@ -124,23 +124,120 @@ export function getLyric(id) {
 
 export function recommend({ intent = '', recent = [] } = {}) {
   const text = intent.toLowerCase();
-  const skipped = new Set(recent.slice(0, 4).map((item) => item.song_id));
+  const skipped = new Set(recent.slice(0, 6).map((item) => item.song_id));
 
+  // Vibe dictionary — mapping natural Chinese/English phrases (especially the
+  // things someone says while coding) to mood tags that exist on songs. Keys
+  // are substring-matched, so "写代码" catches "正在写代码" and so on.
   const moodWeights = new Map([
-    ['累', ['soft', 'calm', 'quiet']],
-    ['困', ['soft', 'calm', 'quiet']],
+    // Coding states — the use-case the user actually cares about
+    ['写代码', ['focus', 'work', 'calm', 'clean']],
+    ['敲代码', ['focus', 'work', 'calm', 'clean']],
+    ['代码', ['focus', 'work', 'clean']],
+    ['coding', ['focus', 'work', 'clean']],
+    ['vibe coding', ['focus', 'work', 'calm', 'night']],
+    ['调bug', ['focus', 'calm', 'quiet']],
+    ['调 bug', ['focus', 'calm', 'quiet']],
+    ['debug', ['focus', 'calm', 'quiet']],
+    ['重构', ['focus', 'clean', 'work']],
+    ['看文档', ['focus', 'calm', 'quiet']],
+    ['读论文', ['focus', 'calm', 'quiet']],
+    ['设计', ['focus', 'calm', 'clean']],
+    ['思考', ['calm', 'deep', 'quiet']],
+    ['开会', ['calm', 'quiet', 'clean']],
+    ['会议', ['calm', 'quiet']],
+    ['deadline', ['drive', 'focus', 'clean']],
+    ['ddl', ['drive', 'focus']],
+    ['赶工', ['drive', 'focus']],
+    ['上线', ['focus', 'clean', 'drive']],
+    ['发版', ['focus', 'clean']],
+    ['提交', ['clean', 'focus']],
+
+    // Feelings / vibes
+    ['累', ['soft', 'calm', 'quiet', 'rest']],
+    ['困', ['soft', 'calm', 'quiet', 'rest']],
+    ['疲', ['soft', 'calm', 'quiet', 'rest']],
+    ['烦', ['calm', 'quiet', 'soft']],
+    ['烦躁', ['calm', 'quiet', 'soft']],
+    ['焦虑', ['calm', 'quiet', 'soft']],
+    ['紧张', ['calm', 'quiet', 'soft']],
+    ['压力', ['calm', 'quiet', 'soft']],
+    ['卡住', ['calm', 'quiet', 'soft']],
+    ['脑子乱', ['calm', 'quiet', 'soft']],
+    ['乱', ['calm', 'quiet']],
+    ['空', ['quiet', 'soft', 'calm']],
+    ['发呆', ['quiet', 'soft', 'calm']],
+    ['冷静', ['calm', 'quiet', 'clean']],
+    ['安静', ['quiet', 'soft', 'calm']],
+    ['松', ['soft', 'calm']],
+    ['放松', ['soft', 'calm', 'quiet']],
+    ['躺', ['soft', 'quiet', 'rest']],
+    ['伤', ['emotional', 'quiet', 'soft']],
+    ['哭', ['emotional', 'quiet', 'soft']],
+    ['丧', ['emotional', 'quiet']],
+    ['想家', ['emotional', 'soft']],
+    ['孤独', ['emotional', 'quiet', 'night']],
+    ['难过', ['emotional', 'quiet', 'soft']],
+    ['开心', ['social', 'afternoon', 'clean']],
+    ['高兴', ['social', 'afternoon', 'clean']],
+    ['兴奋', ['drive', 'cinematic']],
+    ['上头', ['drive', 'cinematic']],
+    ['燃', ['drive', 'cinematic']],
+    ['爽', ['drive', 'clean']],
+
+    // Tasks / moments
     ['工作', ['focus', 'work', 'clean']],
     ['专注', ['focus', 'work']],
+    ['学习', ['focus', 'work', 'calm']],
+    ['写东西', ['focus', 'calm']],
+    ['写作', ['focus', 'calm']],
+    ['摸鱼', ['calm', 'soft', 'afternoon']],
+    ['下班', ['clean', 'afternoon', 'social']],
+    ['吃饭', ['social', 'afternoon', 'clean']],
+    ['吃完饭', ['calm', 'soft']],
+    ['走路', ['drive', 'clean', 'morning']],
+    ['散步', ['calm', 'soft', 'afternoon']],
+    ['跑步', ['drive', 'clean']],
+    ['健身', ['drive', 'cinematic']],
+    ['开车', ['drive', 'clean']],
+    ['地铁', ['drive', 'clean', 'morning']],
+    ['通勤', ['drive', 'clean']],
+    ['路上', ['drive', 'clean']],
+
+    // Times / weather
     ['早', ['morning', 'clean']],
-    ['睡', ['quiet', 'rest', 'soft']],
+    ['清晨', ['morning', 'calm', 'clean']],
+    ['上午', ['morning', 'clean']],
+    ['下午', ['afternoon', 'calm']],
+    ['傍晚', ['afternoon', 'calm', 'soft']],
+    ['晚上', ['night', 'late', 'soft']],
     ['夜', ['night', 'late', 'deep']],
-    ['燃', ['drive', 'cinematic']],
-    ['开心', ['social', 'afternoon']],
-    ['sad', ['emotional', 'quiet']],
+    ['深夜', ['night', 'late', 'deep']],
+    ['凌晨', ['night', 'late', 'deep']],
+    ['睡', ['quiet', 'rest', 'soft']],
+    ['睡前', ['quiet', 'rest', 'soft']],
+    ['睡不着', ['quiet', 'night', 'soft']],
+    ['失眠', ['quiet', 'night', 'soft']],
+    ['雨', ['quiet', 'soft', 'calm', 'emotional']],
+    ['下雨', ['quiet', 'soft', 'calm', 'emotional']],
+    ['晴', ['clean', 'morning']],
+    ['阴', ['calm', 'quiet', 'soft']],
+    ['冬', ['quiet', 'soft', 'emotional']],
+    ['咖啡', ['calm', 'focus', 'afternoon']],
+
+    // English coding vocabulary
     ['focus', ['focus', 'work']],
     ['work', ['focus', 'work']],
+    ['flow', ['focus', 'calm', 'clean']],
+    ['sad', ['emotional', 'quiet']],
+    ['tired', ['soft', 'calm', 'quiet']],
     ['sleep', ['quiet', 'rest']],
-    ['night', ['night', 'late']]
+    ['chill', ['calm', 'soft', 'afternoon']],
+    ['night', ['night', 'late']],
+    ['late', ['night', 'late', 'deep']],
+    ['morning', ['morning', 'clean']],
+    ['run', ['drive', 'clean']],
+    ['drive', ['drive', 'clean']]
   ]);
 
   const wanted = [];
@@ -151,10 +248,14 @@ export function recommend({ intent = '', recent = [] } = {}) {
   const songs = allSongs();
   const scored = songs.map((song) => {
     const moodScore = wanted.reduce((sum, mood) => sum + (song.mood.includes(mood) ? 8 : 0), 0);
-    const freshness = skipped.has(song.id) ? -12 : 0;
+    const freshness = skipped.has(song.id) ? -18 : 0;
     const defaultFit = wanted.length ? 0 : Math.abs(58 - song.energy) * -0.08;
-    return { song, score: moodScore + freshness + defaultFit + song.energy / 100 };
+    const jitter = Math.random() * 0.5;
+    return { song, score: moodScore + freshness + defaultFit + song.energy / 100 + jitter };
   });
 
-  return scored.sort((a, b) => b.score - a.score).slice(0, 4).map((item) => item.song);
+  // Return a wider pool (40 songs) so the LLM has room to curate, but keep
+  // the strongest match at the top. Callers that only need one can still
+  // take .slice(0, 1).
+  return scored.sort((a, b) => b.score - a.score).slice(0, 40).map((item) => item.song);
 }

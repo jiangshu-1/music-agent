@@ -4,8 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "check": "node scripts/check.js",
     "dev": "node --experimental-sqlite server/index.js",
-    "start": "node --experimental-sqlite server/index.js"
+    "dev:all": "node scripts/dev-all.js",
+    "desktop": "electron desktop/main.js",
+    "desktop:dev": "node scripts/desktop-dev.js",
+    "netease": "NeteaseCloudMusicApi",
+    "smoke": "node scripts/smoke.js",
+    "start": "node --experimental-sqlite server/index.js",
+    "test": "node --experimental-sqlite --test tests/*.test.js"
   },
   "engines": {
     "node": ">=22"
@@ -13,7 +20,11 @@
   "dependencies": {
     "NeteaseCloudMusicApi": "^4.31.0",
     "node-ssdp": "^4.0.1",
+    "undici": "^8.2.0",
     "upnp-device-client": "^1.0.2",
     "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11"
   }
 }

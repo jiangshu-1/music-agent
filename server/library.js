@@ -8,10 +8,12 @@ const projectLibrary = join(process.cwd(), 'library');
 const defaultRoots = [projectLibrary, join(homedir(), 'Music')];
 const audioExts = new Set(['.mp3', '.m4a', '.wav', '.flac', '.aac', '.ogg']);
 const colors = ['#e8704e', '#87b38d', '#d7b85d', '#5a9fd6', '#d66b8b', '#cfc7b0'];
+const SCAN_TTL_MS = Number(process.env.LIBRARY_SCAN_TTL_MS ?? 60_000);
 
 mkdirSync(projectLibrary, { recursive: true });
 
 let cache = null;
+let cacheStamp = 0;
 
 function roots() {
   const envRoots = process.env.MUSIC_DIRS?.split(':').map((item) => item.trim()).filter(Boolean);
@@ -42,7 +44,7 @@ function parseName(path) {
   if (parts.length >= 2) {
     return { artist: parts[0].trim(), title: parts.slice(1).join(' - ').trim() };
   }
-  return { artist: 'Local Library', title: cleaned || 'Untitled Track' };
+  return { artist: '本地曲库', title: cleaned || '未命名歌曲' };
 }
 
 function moodFromName(name) {
@@ -64,7 +66,7 @@ function songFromPath(path, index) {
     source: 'local',
     title,
     artist,
-    album: 'Local Files',
+    album: '本地曲库',
     mood: tags?.mood ?? moodFromName(`${title} ${artist} ${path}`),
     energy: tags?.energy ?? 45 + (index * 13) % 45,
     note: tags?.note ?? '',
@@ -73,12 +75,14 @@ function songFromPath(path, index) {
     url: `/api/audio?id=${encodeURIComponent(id)}`,
     path,
     ext,
-    lyric: ['Local file', 'Ready from Claudio library']
+    lyric: ['本地音乐文件', '已从 Claudio 曲库准备好']
   };
 }
 
 export function scanLibrary({ refresh = false } = {}) {
-  if (cache && !refresh) return cache;
+  const now = Date.now();
+  const fresh = cache && (now - cacheStamp) < SCAN_TTL_MS;
+  if (cache && !refresh && fresh) return cache;
 
   const seen = new Set();
   const files = [];
@@ -92,6 +96,7 @@ export function scanLibrary({ refresh = false } = {}) {
   }
 
   cache = files.map(songFromPath);
+  cacheStamp = now;
   return cache;
 }
 
@@ -111,7 +116,7 @@ export function libraryInfo() {
 export function streamAudio(req, res, song) {
   if (!song?.path || !existsSync(song.path)) {
     res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' });
-    res.end(JSON.stringify({ error: 'Audio file not found' }));
+    res.end(JSON.stringify({ error: '找不到这个音频文件' }));
     return;
   }
 
