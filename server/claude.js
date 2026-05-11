@@ -32,7 +32,9 @@ export async function planWithClaude({ input, context, candidates }) {
     'Choose a mood and a queue of songs (up to 4 ids) from the candidates.',
     'Output MUST be a single JSON object with: { mood, queueIds, say, reason, segue }',
     'mood MUST be one of: focus, low-energy, morning, night, social, open',
-    'say is the DJ line in Chinese.',
+    'say is a natural private-radio DJ line in Chinese, 20-60 Chinese chars, suitable for TTS.',
+    'say should not sound like customer service or a robot.',
+    'Do not say “已为你选择”, “根据你的偏好”, “系统推荐”, or “为你播放”.',
     'reason is your rationale in Chinese.',
     'segue is a very short transition note.'
   ].join('\n');

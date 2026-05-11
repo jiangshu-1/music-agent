@@ -1,4 +1,4 @@
-const cacheName = 'claudio-v2';
+const cacheName = 'claudio-v4';
 const assets = ['/', '/index.html', '/styles.css', '/app.js', '/manifest.json', '/icon.svg'];
 
 self.addEventListener('install', (event) => {

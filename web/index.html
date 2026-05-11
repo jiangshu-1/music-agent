@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#050706">
-    <title>Claudio</title>
+    <title>Claudio 个人电台</title>
     <link rel="manifest" href="/manifest.json">
     <link rel="stylesheet" href="/styles.css">
   </head>
@@ -12,19 +12,23 @@
     <main class="shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Personal AI Radio</p>
+          <p class="eyebrow">个人 AI 电台</p>
           <h1>Claudio</h1>
         </div>
-        <div class="status" id="status">local</div>
+        <div class="status" id="status">本地</div>
       </header>
+
+      <section class="ambience" aria-label="当下这一刻">
+        <p class="vibe-line" id="vibeLine">...</p>
+      </section>
 
       <section class="deck" aria-label="播放器">
         <div class="cover" id="cover">
           <div class="needle"></div>
         </div>
         <div class="track">
-          <p class="label">Now Playing</p>
-          <h2 id="title">Loading</h2>
+          <p class="label">正在播放</p>
+          <h2 id="title">加载中</h2>
           <p id="artist">...</p>
           <div class="meter" aria-hidden="true">
             <span></span><span></span><span></span><span></span><span></span>
@@ -38,34 +42,60 @@
         <button class="icon-button" id="next" type="button" title="下一首">›</button>
       </section>
 
+      <section class="transport" aria-label="播放进度">
+        <div class="time-row">
+          <span id="elapsed">0:00</span>
+          <span id="duration">0:00</span>
+        </div>
+        <input id="progress" type="range" min="0" max="1000" value="0" aria-label="播放进度">
+        <div class="transport-tools">
+          <button id="repeat" type="button" title="单曲循环">循环关</button>
+          <label>
+            <span>音量</span>
+            <input id="volume" type="range" min="0" max="100" value="82" aria-label="音量">
+          </label>
+        </div>
+      </section>
+
       <section class="feedback" aria-label="反馈">
-        <button id="like" type="button" data-feedback="like">like</button>
-        <button id="skip" type="button" data-feedback="skip">skip</button>
-        <button id="badFit" type="button" data-feedback="bad-fit">bad fit</button>
+        <button id="like" type="button" data-feedback="like">喜欢</button>
+        <button id="skip" type="button" data-feedback="skip">跳过</button>
+        <button id="badFit" type="button" data-feedback="bad-fit">不合适</button>
       </section>
 
       <section class="panel">
         <div class="panel-head">
-          <p class="label">DJ Dispatch</p>
+          <p class="label">DJ 播报</p>
           <div class="panel-actions">
-            <button id="cast" type="button" title="Cast to UPnP speaker">cast</button>
-            <button id="voice" type="button">speak</button>
+            <button id="ambient" type="button" title="氛围模式（F）">氛围</button>
+            <button id="cast" type="button" title="投放到 UPnP 音箱">投放</button>
+            <button id="voice" type="button">朗读</button>
           </div>
         </div>
         <p class="dispatch" id="dispatch">说一句你现在的状态，Claudio 会安排下一首。</p>
       </section>
 
       <section class="chat">
-        <input id="message" type="text" autocomplete="off" placeholder="比如：我现在有点累，但还要继续工作">
-        <button id="send" type="button">send</button>
+        <div class="quick-phrases" aria-label="快捷短语">
+          <button type="button" data-quick="正在写代码">写代码</button>
+          <button type="button" data-quick="在调 bug，别打扰">调 bug</button>
+          <button type="button" data-quick="脑子卡住了">卡住了</button>
+          <button type="button" data-quick="重构完了，喘口气">喘口气</button>
+          <button type="button" data-quick="deadline 前的最后一段">冲 ddl</button>
+          <button type="button" data-quick="今天结束了">下班</button>
+          <button type="button" data-quick="夜深了，想沉下来">夜深</button>
+          <button type="button" data-quick="发呆">发呆</button>
+        </div>
+        <textarea id="message" rows="1" autocomplete="off" placeholder="一句话说你现在的状态，回车发送。Shift+Enter 换行。"></textarea>
+        <button id="send" type="button">发送</button>
       </section>
 
       <nav class="tabs" aria-label="视图">
-        <button class="active" data-tab="queue" type="button">Queue</button>
-        <button data-tab="lyrics" type="button">Lyrics</button>
-        <button data-tab="library" type="button">Library</button>
-        <button data-tab="netease" type="button">NetEase</button>
-        <button data-tab="profile" type="button">Profile</button>
+        <button class="active" data-tab="queue" type="button">队列</button>
+        <button data-tab="lyrics" type="button">歌词</button>
+        <button data-tab="library" type="button">曲库</button>
+        <button data-tab="netease" type="button">网易云</button>
+        <button data-tab="profile" type="button">我的设置</button>
       </nav>
 
       <section class="view active" id="queueView"></section>
@@ -74,6 +104,19 @@
       <section class="view netease-view" id="neteaseView"></section>
       <section class="view profile-view" id="profileView"></section>
     </main>
+
+    <div class="ambient-mode" id="ambientMode" aria-hidden="true">
+      <div class="ambient-backdrop" id="ambientBackdrop"></div>
+      <button class="ambient-close" id="ambientClose" type="button" title="退出（Esc）">×</button>
+      <div class="ambient-stage">
+        <div class="ambient-cover" id="ambientCover"></div>
+        <h2 class="ambient-title" id="ambientTitle">—</h2>
+        <p class="ambient-artist" id="ambientArtist">—</p>
+        <p class="ambient-lyric" id="ambientLyric"></p>
+      </div>
+      <p class="ambient-dispatch" id="ambientDispatch"></p>
+      <div class="ambient-progress"><span id="ambientProgressBar"></span></div>
+    </div>
 
     <script src="/app.js" type="module"></script>
   </body>

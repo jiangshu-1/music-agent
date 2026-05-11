@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#050706">
+    <title>Claudio Mini</title>
+    <link rel="stylesheet" href="/mini.css">
+  </head>
+  <body>
+    <main class="mini">
+      <header class="bar">
+        <span class="brand">Claudio</span>
+        <span class="status" id="status">…</span>
+      </header>
+
+      <section class="art">
+        <div class="cover" id="cover">
+          <div class="needle"></div>
+        </div>
+      </section>
+
+      <section class="meta">
+        <h1 id="title">—</h1>
+        <p id="artist">—</p>
+      </section>
+
+      <section class="transport">
+        <div class="time-row">
+          <span id="elapsed">0:00</span>
+          <span id="duration">0:00</span>
+        </div>
+        <input id="progress" type="range" min="0" max="1000" value="0" aria-label="播放进度">
+      </section>
+
+      <section class="controls">
+        <button class="icon-button" id="prev" type="button" title="上一首">‹</button>
+        <button class="play-button" id="play" type="button" title="播放或暂停">▶</button>
+        <button class="icon-button" id="next" type="button" title="下一首">›</button>
+      </section>
+
+      <section class="feedback">
+        <button type="button" data-feedback="like">喜欢</button>
+        <button type="button" data-feedback="skip">跳过</button>
+        <button type="button" data-feedback="bad-fit">不合适</button>
+      </section>
+
+      <section class="dispatch">
+        <p class="label">DJ 播报</p>
+        <p id="dispatch">说一句你现在的状态，Claudio 会安排下一首。</p>
+      </section>
+
+      <section class="chat">
+        <input id="message" type="text" autocomplete="off" placeholder="比如：我有点累，但还要继续工作">
+        <button id="send" type="button">发送</button>
+      </section>
+
+      <footer class="bar footer-bar">
+        <button id="openFull" type="button">完整版</button>
+        <button id="sleepTimer" type="button" title="睡眠定时">☾</button>
+        <label class="volume-label">
+          <span>音量</span>
+          <input id="volume" type="range" min="0" max="100" value="82" aria-label="音量">
+        </label>
+        <button id="quit" type="button" class="subtle">退出</button>
+      </footer>
+    </main>
+
+    <script src="/mini.js" type="module"></script>
+  </body>
+</html>

@@ -3,5 +3,6 @@ node_modules/
 .env
 data/*.db
 data/tts-cache/
+user/voices.json
 library/*
 !library/.gitkeep
