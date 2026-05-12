@@ -9,6 +9,7 @@ import {
 } from './llm.js';
 import { planWithClaude } from './claude.js';
 import { logger } from './logger.js';
+import { sanitizeDjLine } from './dj-copy.js';
 
 function detectMood(input) {
   const text = input.toLowerCase();
@@ -31,7 +32,7 @@ function summarySignal(summary, song) {
   const likedScenes = summary.scenes?.liked ?? [];
 
   if (likedSongs.some((item) => item.label === currentLabel)) {
-    return '这首也在你的正向反馈里，继续它最稳。';
+    return '这首也在你的正向反馈里，继续它最合适。';
   }
 
   if (avoidedSongs.some((item) => item.label === currentLabel)) {
@@ -47,11 +48,11 @@ function summarySignal(summary, song) {
   }
 
   if (likedScenes.some((item) => item.label === 'focus') && song.mood.includes('focus')) {
-    return '你的偏好摘要里，focus 场景更稳。';
+    return '你的偏好摘要里，focus 场景更合拍。';
   }
 
   if (likedScenes.some((item) => item.label === 'night') && song.mood.includes('night')) {
-    return '你的偏好摘要里，night 场景更稳。';
+    return '你的偏好摘要里，night 场景更合拍。';
   }
 
   return '';
@@ -82,7 +83,7 @@ function djLineFor(song, input, context, mood) {
 
   if (/调bug|调 bug|debug|卡住/.test(text)) {
     return pick([
-      `调 bug 呢，那不说话了。${artist} 的${title}给你把背景稳住。`,
+      `调 bug 呢，那我少说。${artist} 的${title}放在后面。`,
       `卡着呢我知道，先不吵你。${title}铺一层底，看着办。`,
       `这会儿别分心。${title}给你留着节奏，脑子自己走。`
     ]);
@@ -91,14 +92,14 @@ function djLineFor(song, input, context, mood) {
   if (/写代码|敲代码|代码|coding|重构|写东西|写作/.test(text)) {
     return pick([
       `写代码最怕被打断，我把声音放轻点。${artist} 的${title}不抢你。`,
-      `给你铺一条稳的线。${title}这种，能让你一直在里面。`,
-      `${artist} 的${title}，节奏稳，你接着敲。`
+      `给你铺一条平直的线。${title}这种，能让你一直在里面。`,
+      `${artist} 的${title}，节奏平，你继续敲。`
     ]);
   }
 
   if (mood === 'focus') {
     return pick([
-      `先别把劲儿用猛了。${artist} 的${title}给你铺一层稳定的底。`,
+      `别把劲儿用猛了。${artist} 的${title}给你铺一层低一点的底。`,
       `把注意力收窄一点。${title}替你挡掉外面。`,
       `桌面干净些，${title}陪你把这一段走完。`
     ]);
@@ -114,7 +115,7 @@ function djLineFor(song, input, context, mood) {
 
   if (mood === 'night') {
     return pick([
-      `夜里适合把声音放近一点。${artist} 这首${title}只把房间托住。`,
+      `夜里适合把声音放近一点。${artist} 这首${title}留在房间里。`,
       `把灯拧暗些。${title}给你搭一个半掩的窗。`,
       `${title}不抢你注意力，夜里刚好。`
     ]);
@@ -134,7 +135,7 @@ function djLineFor(song, input, context, mood) {
     ]);
   }
 
-  return `${smallLibrary || historyHint || '我先不讲大道理。'}放 ${artist} 的${title}，让它替你把现在这一段接住。`;
+  return `${smallLibrary || historyHint || '我先不讲大道理。'}放 ${artist} 的${title}，让它在后面走着。`;
 }
 
 function sharedContext(context) {
@@ -158,7 +159,7 @@ function localPlan(input = '', context, error = null) {
     planner: error ? 'fallback' : 'local-rules',
     model: null,
     mood,
-    say: `Claudio: ${djLineFor(current, input, context, mood)}`,
+    say: `此刻: ${sanitizeDjLine(djLineFor(current, input, context, mood))}`,
     reason,
     queue,
     error: error?.message,
@@ -198,7 +199,7 @@ export async function planNext(input = '') {
         planner: activeProvider,
         model: llmPlan.model,
         mood: llmPlan.mood,
-        say: `Claudio: ${llmPlan.say}`,
+        say: `此刻: ${sanitizeDjLine(llmPlan.say)}`,
         reason: llmPlan.reason,
         queue: queue.length ? queue : candidates.slice(0, 4),
         context: sharedContext(context)

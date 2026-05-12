@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const dataDir = process.env.CLAUDIO_DATA_DIR || join(root, 'data');
+const dataDir = process.env.CIKE_DATA_DIR || process.env.CLAUDIO_DATA_DIR || join(root, 'data');
 const dbPath = join(dataDir, 'state.db');
 
 mkdirSync(dirname(dbPath), { recursive: true });
@@ -254,7 +254,7 @@ export function buildPreferenceSummary(feedbackRows = recentFeedback(80)) {
     counts.total
       ? `反馈：喜欢 ${counts.like}，跳过 ${counts.skip}，不合适 ${counts.badFit}。`
       : '还没有足够反馈，先按当前歌库默认推荐。',
-    buildPreferenceLine('更稳的场景', likedScenes, '更稳的场景还没跑出来。'),
+    buildPreferenceLine('更合拍的场景', likedScenes, '更合拍的场景还没跑出来。'),
     buildPreferenceLine('偏好的标签', likedMoods, '偏好的标签还不够明显。'),
     buildPreferenceLine('常被喜欢的歌', likedSongs, '常被喜欢的歌还没形成。'),
     buildPreferenceLine('常被避开的歌', avoidedSongs, '常被避开的歌还没形成。')

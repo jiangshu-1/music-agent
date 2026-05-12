@@ -1,6 +1,6 @@
-# Claudio
+# 此刻
 
-Claudio is a local-first personal AI radio MVP. It runs a Node.js server, serves a mobile PWA player, stores listening state in SQLite, and uses mock music data while the real music provider is still unconnected.
+此刻 is a local-first personal AI radio MVP. It runs a Node.js server, serves a mobile PWA player, stores listening state in SQLite, and uses mock music data while the real music provider is still unconnected.
 
 ## Run
 
@@ -8,7 +8,7 @@ Claudio is a local-first personal AI radio MVP. It runs a Node.js server, serves
 npm run dev
 ```
 
-To start Claudio and the local NetEase-compatible provider together:
+To start 此刻 and the local NetEase-compatible provider together:
 
 ```bash
 npm run dev:all
@@ -20,7 +20,7 @@ To start the desktop menubar mini player (boots the server if it is not running)
 npm run desktop:dev
 ```
 
-To run a read-only smoke check against a running Claudio server:
+To run a read-only smoke check against a running 此刻 server:
 
 ```bash
 npm run smoke
@@ -90,7 +90,7 @@ Supported extensions:
 mp3, m4a, wav, flac, aac, ogg
 ```
 
-Claudio also scans:
+此刻 also scans:
 
 ```txt
 /Users/zhuanz/Music
@@ -129,7 +129,7 @@ FISH_API_KEY=your_fish_api_key_here
 FISH_MODEL=s2-pro
 FISH_USER_ID=self
 FISH_REFERENCE_ID=optional_voice_model_id
-FISH_SPEED=0.92
+FISH_SPEED=1
 FISH_LATENCY=balanced
 ```
 
@@ -141,9 +141,9 @@ Restart the server:
 npm run dev
 ```
 
-When `LLM_PROVIDER=9router`, `/api/chat` uses the configured 9router OpenAI-compatible Chat Completions endpoint. When `LLM_PROVIDER=deepseek`, it uses DeepSeek's OpenAI-compatible Chat Completions API. When `LLM_PROVIDER=openai`, it uses the OpenAI Responses API with Structured Outputs. If the primary API call fails and `LLM_FALLBACK_PROVIDER` is set, Claudio tries that fallback provider before local recommendation rules.
+When `LLM_PROVIDER=9router`, `/api/chat` uses the configured 9router OpenAI-compatible Chat Completions endpoint. When `LLM_PROVIDER=deepseek`, it uses DeepSeek's OpenAI-compatible Chat Completions API. When `LLM_PROVIDER=openai`, it uses the OpenAI Responses API with Structured Outputs. If the primary API call fails and `LLM_FALLBACK_PROVIDER` is set, 此刻 tries that fallback provider before local recommendation rules.
 
-For a more natural DJ voice, configure Fish Audio. `FISH_REFERENCE_ID` pins the DJ to one reusable Fish voice model; leave it empty to use Fish's default voice. Claudio checks Fish API credit through `wallet/{FISH_USER_ID}/api-credit` and caches generated DJ lines in `data/tts-cache/`.
+For a more natural DJ voice, configure Fish Audio. `FISH_REFERENCE_ID` pins the DJ to one reusable Fish voice model; leave it empty to use Fish's default voice. 此刻 checks Fish API credit through `wallet/{FISH_USER_ID}/api-credit` and caches generated DJ lines in `data/tts-cache/`.
 
 ## Main API
 
@@ -193,7 +193,7 @@ For a more natural DJ voice, configure Fish Audio. `FISH_REFERENCE_ID` pins the 
 
 ## NetEase Provider
 
-Claudio expects a `NeteaseCloudMusicApi` compatible service.
+此刻 expects a `NeteaseCloudMusicApi` compatible service.
 
 Start the local provider in another terminal:
 
@@ -205,7 +205,7 @@ npm run netease
 NETEASE_API_BASE=http://127.0.0.1:3000
 NETEASE_LEVEL=exhigh
 NETEASE_USER_ID=your_netease_user_id
-NETEASE_COOKIE=MUSIC_U=your_login_cookie
+NETEASE_COOKIE=your_netease_cookie_here
 ```
 
 Required compatible endpoints:
@@ -245,14 +245,14 @@ Required compatible endpoints:
    - [x] Keep phone PWA controls first-class for couch/desk listening.
 
 6. Packaging and operations
-   - [x] Add a one-command local start flow for Claudio plus the NetEase provider.
+   - [x] Add a one-command local start flow for 此刻 plus the NetEase provider.
    - [x] Add health checks for Fish credit, NetEase cookie, local audio paths, and speaker targets.
    - [x] Add a lightweight backup/export for preferences, history, and imported playlists.
 
 7. Desktop presence
    - [x] macOS menubar mini player (Electron) that reuses all web APIs.
    - [x] Global shortcut (`⌘+Shift+M`) + system media keys wired to the mini player.
-   - [x] Auto-starts the Claudio server if it is not already running.
+   - [x] Auto-starts the 此刻 server if it is not already running.
 
 8. Night flow
    - [x] Server-side sleep timer with configurable fade-out.

@@ -36,7 +36,7 @@ const testFiles = files.filter((file) => (file.startsWith('tests/') || file.star
 const tests = spawnSync(process.execPath, ['--experimental-sqlite', '--test', ...testFiles], { stdio: 'inherit' });
 if (tests.status !== 0) process.exit(tests.status ?? 1);
 
-const base = process.env.CLAUDIO_BASE || 'http://127.0.0.1:8080';
+const base = process.env.CIKE_BASE || process.env.CLAUDIO_BASE || 'http://127.0.0.1:8080';
 
 function serverIsUp() {
   const result = spawnSync('curl', ['--noproxy', '*', '-sS', '--max-time', '2', new URL('/api/stations', base)], {
@@ -55,14 +55,14 @@ function waitForServer() {
 
 let server = null;
 if (!serverIsUp()) {
-  console.log('starting temporary Claudio server for smoke checks');
+  console.log('starting temporary 此刻 server for smoke checks');
   server = spawn(process.execPath, ['--experimental-sqlite', 'server/index.js'], {
     stdio: ['ignore', 'ignore', 'inherit'],
     env: process.env
   });
   if (!waitForServer()) {
     server.kill('SIGTERM');
-    console.error('temporary Claudio server did not become ready');
+    console.error('temporary 此刻 server did not become ready');
     process.exit(1);
   }
 }

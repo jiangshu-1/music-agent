@@ -26,12 +26,12 @@ export const routes = [
       const say = current
         ? stationTransitionLine(station, current)
         : `${station.name}电台暂时没有可播放歌曲。`;
-      broadcastNowPlaying(req, { say: `Claudio: ${say}` });
+      broadcastNowPlaying(req, { say: `此刻: ${say}` });
       res.json({
         station: stationSummary(station),
         current: toClientSong(current),
         queue: toClientSongs(queue),
-        say: `Claudio: ${say}`
+        say: `此刻: ${say}`
       });
     }
   },

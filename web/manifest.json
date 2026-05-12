@@ -1,6 +1,6 @@
 {
-  "name": "Claudio 个人电台",
-  "short_name": "Claudio",
+  "name": "此刻 个人电台",
+  "short_name": "此刻",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0d0f0e",

@@ -57,13 +57,13 @@ test('returns 405 with allow header on method mismatch', async () => {
 });
 
 test('falls back to static files and returns text 404 when missing', async () => {
-  const webRoot = mkdtempSync(join(tmpdir(), 'claudio-web-'));
-  writeFileSync(join(webRoot, 'index.html'), '<h1>Claudio</h1>');
+  const webRoot = mkdtempSync(join(tmpdir(), 'cike-web-'));
+  writeFileSync(join(webRoot, 'index.html'), '<h1>此刻</h1>');
   await withServer([], async (base) => {
     const index = await fetch(`${base}/`);
     assert.equal(index.status, 200);
     assert.equal(index.headers.get('cache-control'), 'no-store');
-    assert.match(await index.text(), /Claudio/);
+    assert.match(await index.text(), /此刻/);
 
     const missing = await fetch(`${base}/missing`);
     assert.equal(missing.status, 404);

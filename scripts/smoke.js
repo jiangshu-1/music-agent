@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-const base = process.env.CLAUDIO_BASE || 'http://127.0.0.1:8080';
+const base = process.env.CIKE_BASE || process.env.CLAUDIO_BASE || 'http://127.0.0.1:8080';
 
 const checks = [
   {
@@ -8,7 +8,7 @@ const checks = [
     path: '/',
     expect: async (response) => {
       const text = await response.text();
-      return response.ok && text.includes('Claudio');
+      return response.ok && text.includes('此刻');
     }
   },
   {

@@ -3,6 +3,7 @@ import { writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { externalError, runExternal } from './resilience.js';
+import { sanitizeDjLine } from './dj-copy.js';
 
 const cacheDir = join(process.cwd(), 'data', 'tts-cache');
 const voicesConfigPath = join(process.cwd(), 'user', 'voices.json');
@@ -10,10 +11,42 @@ const voicesConfigPath = join(process.cwd(), 'user', 'voices.json');
 mkdirSync(cacheDir, { recursive: true });
 
 const voiceStyles = {
-  calm: { id: 'calm', name: '平静主持', speed: 0.92 },
-  radio: { id: 'radio', name: '电台 DJ', speed: 1.02 },
-  whisper: { id: 'whisper', name: '低声陪伴', speed: 0.82 },
-  concise: { id: 'concise', name: '简短播报', speed: 1.05 }
+  calm: {
+    id: 'calm',
+    name: '自然主持',
+    hint: '轻、慢、留白',
+    speed: 1,
+    volume: -1,
+    temperature: 0.55,
+    topP: 0.62
+  },
+  radio: {
+    id: 'radio',
+    name: '明亮电台',
+    hint: '亮、饱满、热场',
+    speed: 1,
+    volume: 2,
+    temperature: 0.9,
+    topP: 0.9
+  },
+  whisper: {
+    id: 'whisper',
+    name: '贴耳低语',
+    hint: '低、近、柔',
+    speed: 1,
+    volume: -5,
+    temperature: 0.42,
+    topP: 0.5
+  },
+  concise: {
+    id: 'concise',
+    name: '短句播报',
+    hint: '短、清、直给',
+    speed: 1,
+    volume: 1,
+    temperature: 0.48,
+    topP: 0.55
+  }
 };
 
 export function ttsStyles() {
@@ -91,7 +124,7 @@ function fishConfig({ voiceId } = {}) {
     teamId: process.env.FISH_TEAM_ID?.trim() || null,
     referenceId,
     activeVoiceId,
-    speed: numberEnv('FISH_SPEED', 0.92),
+    speed: numberEnv('FISH_SPEED', 1),
     volume: numberEnv('FISH_VOLUME', 0),
     temperature: numberEnv('FISH_TEMPERATURE', 0.7),
     topP: numberEnv('FISH_TOP_P', 0.7),
@@ -175,14 +208,50 @@ function normalizeStyle(style) {
 }
 
 function shapeFishText(text, style = 'calm') {
-  const clean = String(text ?? '').replace(/^Claudio:\s*/i, '').trim();
-  if (normalizeStyle(style) === 'concise') {
-    return clean.split(/[。！？.!?]/).find(Boolean)?.trim().slice(0, 80) || clean.slice(0, 80);
+  const clean = sanitizeDjLine(text);
+  const normalized = normalizeStyle(style);
+  if (normalized === 'radio') {
+    const energized = clean
+      .replace(/。/g, '！')
+      .replace(/，/g, '，')
+      .replace(/！{2,}/g, '！');
+    return /^好[，,]/.test(energized) ? energized : `好，${energized}`;
   }
-  if (normalizeStyle(style) === 'whisper') {
-    return clean.replace(/[！!]/g, '。').replace(/。{2,}/g, '。');
+  if (normalized === 'concise') {
+    return clean.split(/[。！？.!?]/).find(Boolean)?.trim().slice(0, 46) || clean.slice(0, 46);
+  }
+  if (normalized === 'whisper') {
+    const softened = clean
+      .replace(/[！!]/g, '。')
+      .replace(/[：:]/g, '，')
+      .replace(/。{2,}/g, '。')
+      .replace(/。/g, '……');
+    return /^嗯[，,]/.test(softened) ? softened : `嗯，${softened}`;
   }
   return clean;
+}
+
+function styleConfig(style = 'calm') {
+  return voiceStyles[normalizeStyle(style)];
+}
+
+function fishRequestPayload({ text, config, voiceStyle }) {
+  const payload = {
+    text,
+    format: 'mp3',
+    mp3_bitrate: config.mp3Bitrate,
+    sample_rate: config.sampleRate,
+    latency: config.latency,
+    chunk_length: config.chunkLength,
+    temperature: voiceStyle.temperature ?? config.temperature,
+    top_p: voiceStyle.topP ?? config.topP,
+    prosody: {
+      speed: voiceStyle.speed ?? config.speed,
+      volume: voiceStyle.volume ?? config.volume
+    }
+  };
+  if (config.referenceId) payload.reference_id = config.referenceId;
+  return payload;
 }
 
 export function ttsCachePath(text, style = 'calm', { voiceId } = {}) {
@@ -194,9 +263,9 @@ export function ttsCachePath(text, style = 'calm', { voiceId } = {}) {
     model: config.model,
     referenceId: config.referenceId,
     speed: voiceStyle.speed,
-    volume: config.volume,
-    temperature: config.temperature,
-    topP: config.topP,
+    volume: voiceStyle.volume,
+    temperature: voiceStyle.temperature,
+    topP: voiceStyle.topP,
     latency: config.latency,
     chunkLength: config.chunkLength,
     sampleRate: config.sampleRate,
@@ -213,6 +282,7 @@ export async function fishTts(text, { style = 'calm', voiceId } = {}) {
   if (!hasFishKey()) return null;
 
   const config = fishConfig({ voiceId });
+  const voiceStyle = styleConfig(style);
   const spokenText = shapeFishText(text, style);
   const cached = ttsCachePath(spokenText, style, { voiceId });
   if (existsSync(cached)) {
@@ -232,16 +302,7 @@ export async function fishTts(text, { style = 'calm', voiceId } = {}) {
         'content-type': 'application/json',
         model: config.model
       },
-      body: JSON.stringify(config.referenceId
-        ? {
-            text: spokenText,
-            reference_id: config.referenceId,
-            format: 'mp3'
-          }
-        : {
-            text: spokenText,
-            format: 'mp3'
-          }),
+      body: JSON.stringify(fishRequestPayload({ text: spokenText, config, voiceStyle })),
       signal
     });
 

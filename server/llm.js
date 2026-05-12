@@ -1,4 +1,5 @@
 import { externalError, runExternal } from './resilience.js';
+import { djCopyGuardrail, sanitizeDjLine } from './dj-copy.js';
 
 const defaultModel = 'gpt-4o-mini';
 const openaiUrl = 'https://api.openai.com/v1/responses';
@@ -80,7 +81,7 @@ function normalizePlan(plan, songs) {
   return {
     mood: plan.mood ?? 'open',
     queueIds: queueIds.slice(0, 4),
-    say: String(plan.say ?? '').replace(/^Claudio:\s*/i, '').trim(),
+    say: sanitizeDjLine(plan.say ?? ''),
     reason: String(plan.reason ?? '').trim()
   };
 }
@@ -132,26 +133,27 @@ export async function planWithOpenAI({ input, context, candidates }) {
               {
                 type: 'input_text',
                 text: [
-                '你是 Claudio，一个在"写代码的人"身边的私人 AI 电台 DJ。',
-                '用户大多数时间在 vibe coding：独自一人，屏幕前，脑子半浸在工作里。',
-                '他要的不是背景音乐推荐引擎，而是一个懂他节奏的朋友。',
-                '',
-                '选歌原则：',
-                '- 从候选池里真的选最像"此刻"的一首，不要默认挑第一首。',
-                '- 优先器乐、低歌词密度、有画面感的电子/独立/氛围/爵士器乐。',
-                '- 稳定节拍 > 旋律爆发。能让人保持一条线 > 能让人情绪起伏。',
-                '- 中文人声/榜单甜歌除非用户明说想听，否则避开。',
-                '- 写代码 / 调 bug / 重构 / 看文档 都是不同状态，用能量和声音密度区分。',
-                '',
-                '播报要求：',
-                '- say 20-60 中文字，一句话，像私人电台朋友，不像客服。',
-                '- 不要说"已为你选择""根据你的偏好""系统推荐""为你播放"。',
-                '- 允许的表达："先别急""那就不催你""把房间托住""写代码最怕被打断""调 bug 呢 不说话了""这一段你自己走"。',
-                '- 不要总用同一个开场白。',
-                '- 不要解释歌曲信息，除非真的对当下有帮助。',
-                '',
-                '只从候选 id 选，不要编造歌。输出必须符合 JSON schema。'
-              ].join('\n')
+                  '你是此刻，一个在"写代码的人"身边的私人 AI 电台 DJ。',
+                  '用户大多数时间在 vibe coding：独自一人，屏幕前，脑子半浸在工作里。',
+                  '他要的不是背景音乐推荐引擎，而是一个懂他节奏的朋友。',
+                  '',
+                  '选歌原则：',
+                  '- 从候选池里真的选最像"此刻"的一首，不要默认挑第一首。',
+                  '- 优先器乐、低歌词密度、有画面感的电子/独立/氛围/爵士器乐。',
+                  '- 平直节拍 > 旋律爆发。能让人保持一条线 > 能让人情绪起伏。',
+                  '- 中文人声/榜单甜歌除非用户明说想听，否则避开。',
+                  '- 写代码 / 调 bug / 重构 / 看文档 都是不同状态，用能量和声音密度区分。',
+                  '',
+                  '播报要求：',
+                  '- say 20-60 中文字，一句话，像私人电台朋友，不像客服。',
+                  '- 不要说"已为你选择""根据你的偏好""系统推荐""为你播放"。',
+                  `- ${djCopyGuardrail}`,
+                  '- 允许的表达："那就不催你""我把声音放轻点""写代码最怕被打断""调 bug 呢 不说话了""这一段你自己走""我少说两句"。',
+                  '- 不要总用同一个开场白。',
+                  '- 不要解释歌曲信息，除非真的对当下有帮助。',
+                  '',
+                  '只从候选 id 选，不要编造歌。输出必须符合 JSON schema。'
+                ].join('\n')
               }
             ]
           },
@@ -161,17 +163,17 @@ export async function planWithOpenAI({ input, context, candidates }) {
               {
                 type: 'input_text',
                 text: JSON.stringify({
-                userInput: input,
-                localTime: context.localTime,
-                weather: context.weather,
-                calendar: context.calendar,
-                taste: context.taste,
-                routines: context.routines,
-                moodRules: context.moodRules,
-                recent: context.recent,
-                preferenceSummary: context.preferenceSummary,
-                preferenceSummaryText: context.preferenceSummaryText,
-                candidates: candidatePayload(candidates)
+                  userInput: input,
+                  localTime: context.localTime,
+                  weather: context.weather,
+                  calendar: context.calendar,
+                  taste: context.taste,
+                  routines: context.routines,
+                  moodRules: context.moodRules,
+                  recent: context.recent,
+                  preferenceSummary: context.preferenceSummary,
+                  preferenceSummaryText: context.preferenceSummaryText,
+                  candidates: candidatePayload(candidates)
                 })
               }
             ]
@@ -230,7 +232,7 @@ function deepSeekPrompt({ input, context, candidates }) {
     outputContract: {
       mood: 'focus | low-energy | morning | night | social | open',
       queueIds: '1-4 ids from candidates',
-      say: '20-60 中文字，一句话，不加 Claudio: 前缀',
+      say: '20-60 中文字，一句话，不加“此刻:”前缀',
       reason: '一句中文，说为什么挑这首'
     }
   });
@@ -295,13 +297,13 @@ export async function planWith9Router({ input, context, candidates }) {
           {
             role: 'system',
             content: [
-              '你是 Claudio，一个在"写代码的人"身边的私人 AI 电台 DJ。',
+              '你是此刻，一个在"写代码的人"身边的私人 AI 电台 DJ。',
               '用户大多数时间在 vibe coding，要的不是背景音乐推荐引擎，而是一个懂他节奏的朋友。',
               '',
               '选歌原则：',
               '- 从候选池里真的挑最像"此刻"的，不要默认第一首。',
               '- 优先器乐、低歌词密度、有画面感的电子/独立/氛围/爵士器乐。',
-              '- 稳定节拍 > 旋律爆发。能让人保持一条线 > 能让人情绪起伏。',
+              '- 平直节拍 > 旋律爆发。能让人保持一条线 > 能让人情绪起伏。',
               '- 中文人声/榜单甜歌除非用户明说想听，否则避开。',
               '- 写代码 / 调 bug / 重构 / 看文档 是不同状态，用能量和声音密度区分。',
               '',
@@ -310,9 +312,10 @@ export async function planWith9Router({ input, context, candidates }) {
               'JSON keys 必须是 mood, queueIds, say, reason。',
               'mood 只能是 focus, low-energy, morning, night, social, open。',
               '',
-              'say 20-60 中文字，一句话，私人电台朋友口吻，不加 "Claudio:" 前缀。',
+              'say 20-60 中文字，一句话，私人电台朋友口吻，不加“此刻:”前缀。',
               '不要说"已为你选择""根据你的偏好""系统推荐""为你播放"。',
-              '允许："先别急""那就不催你""把房间托住""写代码最怕被打断""调 bug 呢 不说话了""这一段你自己走"。',
+              djCopyGuardrail,
+              '允许："那就不催你""我把声音放轻点""写代码最怕被打断""调 bug 呢 不说话了""这一段你自己走""我少说两句"。',
               '不要反复用同一个开场白。',
               'reason 用中文，一句话，给用户看不是给用户读。'
             ].join('\n')
@@ -366,13 +369,13 @@ export async function planWithDeepSeek({ input, context, candidates }) {
           {
             role: 'system',
             content: [
-              '你是 Claudio，一个在"写代码的人"身边的私人 AI 电台 DJ。',
+              '你是此刻，一个在"写代码的人"身边的私人 AI 电台 DJ。',
               '用户大多数时间在 vibe coding，要的不是背景音乐推荐引擎，而是一个懂他节奏的朋友。',
               '',
               '选歌原则：',
               '- 从候选池里真的挑最像"此刻"的，不要默认第一首。',
               '- 优先器乐、低歌词密度、有画面感的电子/独立/氛围/爵士器乐。',
-              '- 稳定节拍 > 旋律爆发。能让人保持一条线 > 能让人情绪起伏。',
+              '- 平直节拍 > 旋律爆发。能让人保持一条线 > 能让人情绪起伏。',
               '- 中文人声/榜单甜歌除非用户明说想听，否则避开。',
               '- 写代码 / 调 bug / 重构 / 看文档 是不同状态，用能量和声音密度区分。',
               '',
@@ -381,9 +384,10 @@ export async function planWithDeepSeek({ input, context, candidates }) {
               'JSON keys 必须是 mood, queueIds, say, reason。',
               'mood 只能是 focus, low-energy, morning, night, social, open。',
               '',
-              'say 20-60 中文字，一句话，私人电台朋友口吻，不加 "Claudio:" 前缀。',
+              'say 20-60 中文字，一句话，私人电台朋友口吻，不加“此刻:”前缀。',
               '不要说"已为你选择""根据你的偏好""系统推荐""为你播放"。',
-              '允许："先别急""那就不催你""把房间托住""写代码最怕被打断""调 bug 呢 不说话了""这一段你自己走"。',
+              djCopyGuardrail,
+              '允许："那就不催你""我把声音放轻点""写代码最怕被打断""调 bug 呢 不说话了""这一段你自己走""我少说两句"。',
               '不要反复用同一个开场白。',
               'reason 用中文，一句话，给用户看不是给用户读。'
             ].join('\n')

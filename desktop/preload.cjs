@@ -8,12 +8,12 @@ ipcRenderer.on('claudio:media', (_event, action) => {
     try {
       handler(action);
     } catch (error) {
-      console.error('claudio.on("media") handler threw:', error);
+      console.error('此刻 bridge media handler threw:', error);
     }
   }
 });
 
-contextBridge.exposeInMainWorld('claudio', {
+const bridgeApi = {
   openExternal: (url) => ipcRenderer.send('claudio:open-external', url),
   quit: () => ipcRenderer.send('claudio:quit'),
   hide: () => ipcRenderer.send('claudio:hide'),
@@ -23,4 +23,7 @@ contextBridge.exposeInMainWorld('claudio', {
     list.push(handler);
     listeners.set(channel, list);
   }
-});
+};
+
+contextBridge.exposeInMainWorld('cike', bridgeApi);
+contextBridge.exposeInMainWorld('claudio', bridgeApi);

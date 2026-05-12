@@ -1,4 +1,5 @@
 import { fishStatus, fishTts } from '../tts.js';
+import { sanitizeDjLine } from '../dj-copy.js';
 
 export const routes = [
   {
@@ -13,7 +14,7 @@ export const routes = [
     path: '/api/tts',
     async handler(req, res) {
       const body = await req.body();
-      const text = String(body.text ?? '').replace(/^Claudio:\s*/i, '').trim().slice(0, 500);
+      const text = sanitizeDjLine(body.text ?? '').slice(0, 500);
       if (!text) {
         res.json({ error: '缺少要朗读的文字' }, 400);
         return;

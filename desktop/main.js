@@ -8,8 +8,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
-const SERVER_HOST = process.env.CLAUDIO_HOST ?? '127.0.0.1';
-const SERVER_PORT = Number(process.env.PORT ?? process.env.CLAUDIO_PORT ?? 8080);
+const SERVER_HOST = process.env.CIKE_HOST ?? process.env.CLAUDIO_HOST ?? '127.0.0.1';
+const SERVER_PORT = Number(process.env.PORT ?? process.env.CIKE_PORT ?? process.env.CLAUDIO_PORT ?? 8080);
 const SERVER_BASE = `http://${SERVER_HOST}:${SERVER_PORT}`;
 const MINI_URL = `${SERVER_BASE}/mini`;
 
@@ -29,7 +29,7 @@ async function pingServer() {
 async function ensureServer() {
   if (await pingServer()) return true;
 
-  console.log('[desktop] Claudio server not running, starting it...');
+  console.log('[desktop] 此刻 server not running, starting it...');
   serverProcess = spawn('node', ['--experimental-sqlite', 'server/index.js'], {
     cwd: projectRoot,
     stdio: ['ignore', 'inherit', 'inherit'],
@@ -37,7 +37,7 @@ async function ensureServer() {
   });
 
   serverProcess.on('exit', (code) => {
-    console.log(`[desktop] Claudio server exited with code ${code}`);
+    console.log(`[desktop] 此刻 server exited with code ${code}`);
     serverProcess = null;
   });
 
@@ -123,7 +123,7 @@ function createTrayIcon() {
     Buffer.from(bufferToPng(buffer, size, size))
   );
   const created = new Tray(image);
-  created.setToolTip('Claudio 个人电台');
+  created.setToolTip('此刻 个人电台');
   return created;
 }
 
@@ -196,7 +196,7 @@ function createWindow() {
     alwaysOnTop: true,
     transparent: false,
     backgroundColor: '#0d0f0e',
-    title: 'Claudio Mini',
+    title: '此刻 Mini',
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -281,7 +281,7 @@ function buildTrayMenu() {
       }
     },
     { type: 'separator' },
-    { label: '退出 Claudio', click: () => app.quit() }
+    { label: '退出 此刻', click: () => app.quit() }
   ]);
 }
 
@@ -308,7 +308,7 @@ app.on('ready', async () => {
   // Boot the server before creating the window so the first page load succeeds.
   const ok = await ensureServer();
   if (!ok) {
-    console.error('[desktop] Claudio server did not start in time');
+    console.error('[desktop] 此刻 server did not start in time');
   }
 
   window = createWindow();
@@ -326,7 +326,7 @@ app.on('ready', async () => {
 
   registerShortcuts();
 
-  if (process.env.CLAUDIO_DESKTOP_SMOKE === '1') {
+  if (process.env.CIKE_DESKTOP_SMOKE === '1' || process.env.CLAUDIO_DESKTOP_SMOKE === '1') {
     console.log('[desktop] smoke mode: tray + window created, server reachable:', ok);
     setTimeout(() => app.exit(0), 1500);
   }

@@ -1,4 +1,4 @@
-// "当下这一刻" context for Claudio: local time band, sun position,
+// "当下这一刻" context for 此刻: local time band, sun position,
 // weather, recent listening stretch, and a short human-readable vibe line.
 // Uses Open-Meteo free API (no key) for weather, cached for 15 min.
 
@@ -19,10 +19,10 @@ async function fetchJson(url, { timeoutMs = 3500 } = {}) {
 
 async function resolveLocation() {
   // Priority: explicit env vars > cached > IP-based guess
-  const envLat = Number(process.env.CLAUDIO_LAT);
-  const envLon = Number(process.env.CLAUDIO_LON);
+  const envLat = Number(process.env.CIKE_LAT ?? process.env.CLAUDIO_LAT);
+  const envLon = Number(process.env.CIKE_LON ?? process.env.CLAUDIO_LON);
   if (Number.isFinite(envLat) && Number.isFinite(envLon)) {
-    return { lat: envLat, lon: envLon, city: process.env.CLAUDIO_CITY ?? '本地', source: 'env' };
+    return { lat: envLat, lon: envLon, city: process.env.CIKE_CITY ?? process.env.CLAUDIO_CITY ?? '本地', source: 'env' };
   }
   if (geoCache) return geoCache;
   try {

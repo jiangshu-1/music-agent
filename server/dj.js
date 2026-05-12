@@ -1,5 +1,6 @@
 import { getSong, toClientSong } from './music.js';
 import { getCachedAmbience } from './ambience.js';
+import { sanitizeDjLine } from './dj-copy.js';
 
 const timeBands = [
   { start: 0, end: 6, hint: '夜还没散，声音放轻' },
@@ -53,7 +54,7 @@ export function buildLocalIntro({ from, to, hour = new Date().getHours() } = {})
   parts.push(bridge ?? band.hint);
   if (energy && Math.random() < 0.5) parts.push(energy);
   parts.push(`接下来是 ${to.artist} 的《${to.title}》`);
-  return parts.join('，') + '。';
+  return sanitizeDjLine(parts.join('，') + '。');
 }
 
 export function djIntroForTransition({ fromId, toId } = {}) {
@@ -68,11 +69,11 @@ export function djIntroForTransition({ fromId, toId } = {}) {
 }
 
 // When the user switches stations (e.g. focus → late night), we want the DJ
-// to briefly acknowledge the shift instead of saying "已接上". These are hand
+// to briefly acknowledge the shift with a small, human line. These are hand
 // written because templates are what make it feel like the DJ knows the room.
 const stationTransitionLines = {
   focus: [
-    '把工作那层壳压一下，先稳住手头。',
+    '把工作那层壳压一下，先做手头这一小块。',
     '现在把注意力收窄一点，只留这一件事。',
     '把速度找回来。',
     '桌面干净些，声音替你挡掉外面。'
@@ -86,7 +87,7 @@ const stationTransitionLines = {
   discovery: [
     '翻点新东西给你。',
     '换一条没走过的路试试。',
-    '今天换换口味，接几首不熟的。'
+    '今天换换口味，放几首不熟的。'
   ],
   commute: [
     '把速度拉起来，门在外面。',
@@ -122,6 +123,6 @@ function stationLineFor(stationId, fallback) {
 export function stationTransitionLine(station, current) {
   if (!station) return null;
   const opener = stationLineFor(station.id, `${station.name}电台。`);
-  if (!current) return opener;
-  return `${opener}先放 ${current.artist} 的《${current.title}》。`;
+  if (!current) return sanitizeDjLine(opener);
+  return sanitizeDjLine(`${opener}先放 ${current.artist} 的《${current.title}》。`);
 }

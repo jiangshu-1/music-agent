@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-process.env.CLAUDIO_DATA_DIR = mkdtempSync(join(tmpdir(), 'claudio-data-'));
+process.env.CIKE_DATA_DIR = mkdtempSync(join(tmpdir(), 'cike-data-'));
 process.env.HOST = '127.0.0.1';
 process.env.LOG_LEVEL = 'error';
 

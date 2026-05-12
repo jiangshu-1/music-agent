@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { djCopyGuardrail, sanitizeDjLine } from './dj-copy.js';
 
 const root = process.cwd();
 
@@ -35,6 +36,7 @@ export async function planWithClaude({ input, context, candidates }) {
     'say is a natural private-radio DJ line in Chinese, 20-60 Chinese chars, suitable for TTS.',
     'say should not sound like customer service or a robot.',
     'Do not say “已为你选择”, “根据你的偏好”, “系统推荐”, or “为你播放”.',
+    djCopyGuardrail,
     'reason is your rationale in Chinese.',
     'segue is a very short transition note.'
   ].join('\n');
@@ -58,7 +60,7 @@ export async function planWithClaude({ input, context, candidates }) {
         resolve({
           mood: result.mood || 'open',
           queueIds: result.queueIds || [candidates[0]?.id],
-          say: result.say || '',
+          say: sanitizeDjLine(result.say || ''),
           reason: result.reason || '',
           segue: result.segue || '',
           model: 'claude-code'

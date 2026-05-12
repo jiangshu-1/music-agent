@@ -4,33 +4,47 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#050706">
-    <title>Claudio Mini</title>
+    <title>此刻 Mini</title>
     <link rel="stylesheet" href="/mini.css">
   </head>
   <body>
-    <main class="mini">
-      <header class="bar">
-        <span class="brand">Claudio</span>
-        <span class="status" id="status">…</span>
+    <main class="mini" id="mini" data-state="loading">
+      <header class="top-strip">
+        <div class="brand-lockup">
+          <span class="eyebrow">midnight radio</span>
+          <span class="brand">此刻</span>
+        </div>
+        <div class="status-pill" aria-live="polite">
+          <span class="signal-dot" aria-hidden="true"></span>
+          <span class="status" id="status">启动中</span>
+        </div>
       </header>
 
-      <section class="art">
-        <div class="cover" id="cover">
-          <div class="needle"></div>
+      <section class="receiver" aria-label="正在播放">
+        <div class="dial">
+          <div class="dial-ring" aria-hidden="true"></div>
+          <div class="cover" id="cover">
+            <div class="needle"></div>
+          </div>
+        </div>
+        <div class="meta">
+          <p class="channel">Now on air</p>
+          <h1 id="title">—</h1>
+          <p id="artist">—</p>
         </div>
       </section>
 
-      <section class="meta">
-        <h1 id="title">—</h1>
-        <p id="artist">—</p>
-      </section>
-
-      <section class="transport">
+      <section class="transport-card" aria-label="播放进度">
         <div class="time-row">
           <span id="elapsed">0:00</span>
+          <span class="waveform" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
           <span id="duration">0:00</span>
         </div>
         <input id="progress" type="range" min="0" max="1000" value="0" aria-label="播放进度">
+      </section>
+
+      <section class="lyric-strip" id="lyricStrip" data-lyric-state="empty" aria-live="polite">
+        <p id="lyricLine">等一行歌词进来。</p>
       </section>
 
       <section class="controls">
@@ -45,9 +59,19 @@
         <button type="button" data-feedback="bad-fit">不合适</button>
       </section>
 
+      <section class="queue-peek" aria-label="接下来">
+        <div class="section-row">
+          <span>Up next</span>
+          <span id="queueCount">0</span>
+        </div>
+        <div class="queue-preview" id="queuePreview">
+          <p>等待电台接入。</p>
+        </div>
+      </section>
+
       <section class="dispatch">
-        <p class="label">DJ 播报</p>
-        <p id="dispatch">说一句你现在的状态，Claudio 会安排下一首。</p>
+        <p class="label">DJ dispatch</p>
+        <p id="dispatch">说一句你现在的状态，此刻会安排下一首。</p>
       </section>
 
       <section class="chat">
@@ -55,9 +79,17 @@
         <button id="send" type="button">发送</button>
       </section>
 
-      <footer class="bar footer-bar">
+      <footer class="footer-bar">
         <button id="openFull" type="button">完整版</button>
-        <button id="sleepTimer" type="button" title="睡眠定时">☾</button>
+        <div class="sleep-control">
+          <button id="sleepTimer" type="button" title="睡眠定时" aria-haspopup="menu" aria-expanded="false">☾</button>
+          <div class="sleep-menu" id="sleepMenu" role="menu" hidden>
+            <button type="button" role="menuitem" data-mini-sleep="15">15 分</button>
+            <button type="button" role="menuitem" data-mini-sleep="30">30 分</button>
+            <button type="button" role="menuitem" data-mini-sleep="45">45 分</button>
+            <button type="button" role="menuitem" data-mini-sleep="60">60 分</button>
+          </div>
+        </div>
         <label class="volume-label">
           <span>音量</span>
           <input id="volume" type="range" min="0" max="100" value="82" aria-label="音量">

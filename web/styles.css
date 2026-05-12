@@ -1321,7 +1321,7 @@ pre {
 }
 
 .ambient-dispatch::before {
-  content: '— Claudio  ';
+  content: '— 此刻  ';
   color: var(--accent);
   letter-spacing: 0.3em;
 }
@@ -1352,64 +1352,47 @@ pre {
   .ambient-dispatch { max-width: 84%; bottom: 2.4rem; }
 }
 
-.fish-voice-pool {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
-  gap: 0.5rem;
+.voice-head {
+  margin-bottom: 0.65rem;
+}
+
+.voice-current {
+  min-width: 0;
+  max-width: 50%;
+  overflow: hidden;
+  color: var(--fg-dim);
+  font-size: 0.78rem;
+  text-align: right;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.voice-settings .voice-row {
   margin-top: 0.5rem;
 }
 
-.fish-voice-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: stretch;
-  border: 1px solid var(--border);
-  background: var(--bg);
+.voice-main-row {
+  grid-template-columns: minmax(0, 1fr) 4.4rem;
 }
 
-.fish-voice-card.active {
-  border-color: var(--accent);
-  background: linear-gradient(135deg, rgba(216, 92, 39, 0.1), transparent 60%);
+.voice-style-row {
+  grid-template-columns: minmax(0, 1fr);
 }
 
-.fish-voice-card .voice-pick {
-  background: transparent;
-  border: none;
-  color: var(--fg);
-  padding: 0.55rem 0.65rem;
-  text-align: left;
-  cursor: pointer;
-  font-family: inherit;
+.voice-settings .voice-row select {
+  min-height: 2.65rem;
 }
 
-.fish-voice-card .voice-pick strong {
-  display: block;
-  font-size: 0.82rem;
-  font-weight: bold;
+.voice-settings .voice-row button {
+  min-height: 2.65rem;
+  text-transform: none;
 }
 
-.fish-voice-card .voice-pick span {
-  display: block;
-  font-size: 0.68rem;
-  color: var(--fg-dim);
-  margin-top: 0.15rem;
-  line-height: 1.4;
-}
-
-.fish-voice-card .voice-sample {
-  background: var(--surface);
-  border: none;
-  border-left: 1px solid var(--border);
-  color: var(--fg-dim);
-  padding: 0 0.7rem;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 0.82rem;
-  transition: color 0.15s ease;
-}
-
-.fish-voice-card .voice-sample:hover {
-  color: var(--accent);
+.voice-meta {
+  margin: 0.65rem 0 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .chat {

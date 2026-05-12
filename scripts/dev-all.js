@@ -59,4 +59,4 @@ if (await isUp(new URL('/login/status', neteaseBase))) {
   start('netease', npm, ['run', 'netease']);
 }
 
-start('claudio', process.execPath, ['--experimental-sqlite', 'server/index.js']);
+start('此刻', process.execPath, ['--experimental-sqlite', 'server/index.js']);

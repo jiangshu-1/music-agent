@@ -1,9 +1,10 @@
 .DS_Store
 node_modules/
-.env
-data/*.db
-data/tts-cache/
+.env*
+!.env.example
+data/
 user/voices.json
 .kiro/specs/*/.config.kiro
 library/*
 !library/.gitkeep
+*.log

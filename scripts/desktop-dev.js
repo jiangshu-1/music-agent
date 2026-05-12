@@ -48,7 +48,7 @@ process.on('SIGINT', () => shutdown(0));
 process.on('SIGTERM', () => shutdown(0));
 
 const npm = platform() === 'win32' ? 'npm.cmd' : 'npm';
-const host = process.env.CLAUDIO_HOST ?? '127.0.0.1';
+const host = process.env.CIKE_HOST ?? process.env.CLAUDIO_HOST ?? '127.0.0.1';
 const port = Number(process.env.PORT ?? 8080);
 const serverUrl = `http://${host}:${port}/api/now`;
 const neteaseBase = process.env.NETEASE_API_BASE ?? 'http://127.0.0.1:3000';
@@ -66,15 +66,15 @@ if (!(await isUp(neteaseProbe))) {
   console.log(`[netease] reusing existing provider at ${neteaseBase}`);
 }
 
-// 2. Claudio server
+// 2. 此刻 server
 if (!(await isUp(serverUrl))) {
-  start('claudio', process.execPath, ['--experimental-sqlite', 'server/index.js']);
+  start('此刻', process.execPath, ['--experimental-sqlite', 'server/index.js']);
   for (let attempt = 0; attempt < 40; attempt += 1) {
     if (await isUp(serverUrl)) break;
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
 } else {
-  console.log(`[claudio] reusing existing server at http://${host}:${port}`);
+  console.log(`[此刻] reusing existing server at http://${host}:${port}`);
 }
 
 // 3. Electron mini player

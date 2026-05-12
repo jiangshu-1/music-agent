@@ -226,21 +226,63 @@ function updateAmbientTrack() {
   els.ambientLyric.classList.remove('visible');
 }
 
+function sanitizeDjCopy(text = '') {
+  let clean = String(text ?? '')
+    .replace(/^(?:Claudio|此刻):\s*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const replacements = [
+    [/让它替你把(?:现在|当下|这一段|这段|此刻)?接住/g, '让它在后面走着'],
+    [/把(?:现在|当下|这一段|这段|此刻)?接住/g, '把歌放进去'],
+    [/接住(?:当下|现在|这一段|这段|此刻)?/g, '往下走'],
+    [/把(?:现在|当下|这一段|这段|此刻)?(?:先)?稳住/g, '先把声音放低'],
+    [/稳住(?:手头|节奏|背景|当下|现在|这一段|这段)?/g, '慢一点'],
+    [/把房间(?:声音)?托住/g, '把声音放低一点'],
+    [/托住(?:房间|这一段|这段|当下|现在|此刻)?/g, '留在后面'],
+    [/撑住/g, '缓一缓'],
+    [/兜住/g, '收在后面'],
+    [/抱住/g, '留在旁边'],
+    [/已接上/g, '已经切过去'],
+    [/接上/g, '切过去']
+  ];
+  for (const [pattern, replacement] of replacements) {
+    clean = clean.replace(pattern, replacement);
+  }
+  return clean.replace(/\s+([，。！？、])/g, '$1').trim();
+}
+
+function setDispatch(text) {
+  const clean = sanitizeDjCopy(text);
+  if (clean) els.dispatch.textContent = clean;
+  return clean;
+}
+
+function scrubDispatchElement() {
+  if (!els.dispatch) return '';
+  const text = els.dispatch.textContent ?? '';
+  const clean = sanitizeDjCopy(text);
+  if (clean && clean !== text) els.dispatch.textContent = clean;
+  return clean;
+}
+
 function updateAmbientDispatch() {
   if (!state.ambientActive || !els.ambientDispatch) return;
-  const text = els.dispatch?.textContent?.trim() ?? '';
+  const text = scrubDispatchElement();
   if (!text || text === els.ambientDispatch.textContent) return;
   els.ambientDispatch.style.opacity = '0';
   setTimeout(() => {
-    els.ambientDispatch.textContent = text.replace(/^Claudio:\s*/i, '');
+    els.ambientDispatch.textContent = sanitizeDjCopy(text);
     els.ambientDispatch.style.opacity = '';
   }, 300);
 }
 
 // Observe the main DJ dispatch element so any place that writes to it
-// automatically syncs into ambient mode without us having to touch each call site.
+// automatically gets scrubbed and synced into ambient mode.
 if (typeof MutationObserver !== 'undefined') {
-  const observer = new MutationObserver(() => updateAmbientDispatch());
+  const observer = new MutationObserver(() => {
+    scrubDispatchElement();
+    updateAmbientDispatch();
+  });
   const attach = () => {
     if (els.dispatch) {
       observer.observe(els.dispatch, { childList: true, characterData: true, subtree: true });
@@ -492,16 +534,47 @@ async function renderProfile() {
   }
   const selectedVoice = resolveVoice();
   const selectedCastDevice = resolveCastDevice();
-  const voiceMode = tts.provider === 'fish'
-    ? `Fish 语音 · ${tts.model || '默认模型'} · ${tts.voice === 'custom' ? '固定声音' : '默认声音（建议设置固定声音）'}`
-    : '浏览器自带朗读';
-  const fishCreditInfo = tts.provider === 'fish'
-    ? tts.credit?.error
-      ? ` · 余额检查失败：${escapeHtml(tts.credit.error)}`
-      : tts.credit?.credit != null
-        ? ` · 余额 ${escapeHtml(tts.credit.credit)}`
-        : ''
-    : '';
+  const fishVoices = Array.isArray(tts.voices) ? tts.voices : [];
+  const activeFishVoiceId = state.fishVoiceId || tts.defaultVoiceId || 'env';
+  const activeFishVoice = fishVoices.find((voice) => voice.id === activeFishVoiceId);
+  const activeFishVoiceName = activeFishVoice?.name || (tts.voice === 'custom' ? '固定声音' : '默认声音');
+  const fishVoiceOptions = fishVoices.length
+    ? fishVoices.map((voice) => `
+      <option value="${escapeHtml(voice.id)}" ${voice.id === activeFishVoiceId ? 'selected' : ''}>
+        ${escapeHtml(voice.name)}
+      </option>
+    `).join('')
+    : `<option value="${escapeHtml(activeFishVoiceId)}">${escapeHtml(activeFishVoiceName)}</option>`;
+  const voiceCurrent = tts.provider === 'fish'
+    ? activeFishVoiceName
+    : selectedVoice?.name || '自动';
+  const styleDefaults = {
+    calm: { id: 'calm', name: '自然主持', hint: '轻、慢、留白', speed: 1 },
+    radio: { id: 'radio', name: '明亮电台', hint: '亮、饱满、热场', speed: 1 },
+    whisper: { id: 'whisper', name: '贴耳低语', hint: '低、近、柔', speed: 1 },
+    concise: { id: 'concise', name: '短句播报', hint: '短、清、直给', speed: 1 }
+  };
+  const rawStylesById = new Map((tts.styles ?? []).map((style) => [style.id, style]));
+  const ttsStyleList = Object.keys(styleDefaults).map((id) => ({
+    ...(rawStylesById.get(id) ?? {}),
+    ...styleDefaults[id]
+  }));
+  const selectedStyle = ttsStyleList.find((style) => style.id === state.voiceStyle) ?? ttsStyleList[0];
+  const voiceMetaParts = tts.provider === 'fish'
+    ? [
+        'Fish',
+        tts.model || null,
+        selectedStyle?.hint || null,
+        tts.credit?.error
+          ? '余额检查失败'
+          : tts.credit?.credit != null ? `余额 ${tts.credit.credit}` : null
+      ]
+    : [
+        '浏览器朗读',
+        selectedStyle?.hint || null,
+        selectedVoice?.lang || null
+      ];
+  const voiceMeta = voiceMetaParts.filter(Boolean).map(escapeHtml).join(' · ');
   const voiceOptions = [
     '<option value="">自动选择声音</option>',
     ...state.voices.map((voice) => `
@@ -510,14 +583,9 @@ async function renderProfile() {
       </option>
     `)
   ].join('');
-  const styleOptions = (tts.styles ?? [
-    { id: 'calm', name: '平静主持' },
-    { id: 'radio', name: '电台 DJ' },
-    { id: 'whisper', name: '低声陪伴' },
-    { id: 'concise', name: '简短播报' }
-  ]).map((style) => `
+  const styleOptions = ttsStyleList.map((style) => `
     <option value="${escapeHtml(style.id)}" ${style.id === state.voiceStyle ? 'selected' : ''}>
-      ${escapeHtml(style.name)}
+      ${escapeHtml(style.name)}${style.hint ? ` · ${escapeHtml(style.hint)}` : ''}
     </option>
   `).join('');
   const castOptions = [
@@ -606,37 +674,25 @@ async function renderProfile() {
       </p>
     </div>
     <div class="voice-settings">
-      <p class="label">DJ 声音</p>
-      ${tts.provider === 'fish' && Array.isArray(tts.voices) && tts.voices.length ? `
-        <div class="fish-voice-pool">
-          ${tts.voices.map((voice) => {
-            const isActive = (state.fishVoiceId || tts.defaultVoiceId || 'env') === voice.id;
-            return `
-              <article class="fish-voice-card ${isActive ? 'active' : ''}">
-                <button type="button" class="voice-pick" data-voice-pick="${voice.id}">
-                  <strong>${escapeHtml(voice.name)}</strong>
-                  ${voice.description ? `<span>${escapeHtml(voice.description)}</span>` : ''}
-                </button>
-                <button type="button" class="voice-sample" data-voice-sample="${voice.id}" title="试听">▶</button>
-              </article>
-            `;
-          }).join('')}
+      <div class="section-head voice-head">
+        <p class="label">DJ 声音</p>
+        <span class="voice-current">${escapeHtml(voiceCurrent)}</span>
+      </div>
+      ${tts.provider === 'fish' ? `
+        <div class="voice-row voice-main-row">
+          <select id="fishVoiceSelect" aria-label="Fish DJ 声音">${fishVoiceOptions}</select>
+          <button type="button" data-test-voice>试听</button>
         </div>
-        <p class="tts-info">点卡片选用，点 ▶ 试听。不满意的话改 <code>user/voices.json</code> 重命名或加新的。</p>
-      ` : ''}
-      <div class="voice-row">
-        <select id="voiceSelect" aria-label="浏览器备用声音">${voiceOptions}</select>
-      </div>
-      <div class="voice-row">
+      ` : `
+        <div class="voice-row voice-main-row">
+          <select id="voiceSelect" aria-label="浏览器声音">${voiceOptions}</select>
+          <button type="button" data-test-voice>试听</button>
+        </div>
+      `}
+      <div class="voice-row voice-style-row">
         <select id="voiceStyleSelect" aria-label="DJ 声音风格">${styleOptions}</select>
-        <button type="button" data-test-voice>试听风格</button>
       </div>
-      <p class="tts-info">
-        朗读方式：${voiceMode}
-        ${tts.provider === 'fish'
-          ? ` · 语速 ${tts.speed ?? 0.92}${fishCreditInfo}`
-          : selectedVoice ? ` · 当前声音：${escapeHtml(selectedVoice.name)}` : ''}
-      </p>
+      <p class="tts-info voice-meta">${voiceMeta}</p>
     </div>
   `;
 }
@@ -1102,9 +1158,9 @@ async function playStation(id) {
   if (data.current) renderSong(data.current);
   renderQueue();
   await renderLyrics();
-  els.dispatch.textContent = data.say ?? `${data.station?.name ?? '电台'}已接上`;
+  const say = setDispatch(data.say ?? `${data.station?.name ?? '电台'}已切换`);
   els.status.textContent = `${data.station?.name ?? '电台'} · ${state.queue.length} 首`;
-  speak(els.dispatch.textContent);
+  speak(say);
 }
 
 async function saveCurrentQueueAsStation() {
@@ -1146,7 +1202,7 @@ async function exportBackup() {
   const link = document.createElement('a');
   const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
   link.href = url;
-  link.download = `claudio-backup-${stamp}.json`;
+  link.download = `cike-backup-${stamp}.json`;
   document.body.appendChild(link);
   link.click();
   link.remove();
@@ -1236,9 +1292,7 @@ async function boot() {
             renderQueue();
             renderLyrics().catch(() => {});
           }
-          if (msg.say) {
-            els.dispatch.textContent = msg.say;
-          }
+          if (msg.say) setDispatch(msg.say);
           els.status.textContent = '与另一个窗口同步';
           return;
         }
@@ -1253,10 +1307,10 @@ async function boot() {
           state.preferenceSummary = msg.context?.preferenceSummary ?? state.preferenceSummary;
           renderSong(msg.queue[0]);
           renderQueue();
-          els.dispatch.textContent = msg.say;
+          const say = setDispatch(msg.say);
           state.lastMood = msg.mood ?? 'unknown';
           els.status.textContent = `定时推荐：${displayMood(msg.mood)}`;
-          speak(msg.say);
+          speak(say);
         }
       } catch (err) {
         console.error('WS message error:', err);
@@ -1286,11 +1340,11 @@ async function sendMessage() {
     renderSong(plan.queue[0]);
     renderQueue();
     await renderLyrics();
-    els.dispatch.textContent = plan.say;
+    const say = setDispatch(plan.say);
     els.message.value = '';
     state.lastMood = plan.mood ?? 'unknown';
     els.status.textContent = plan.mood ? `推荐：${displayMood(plan.mood)}` : '已推荐';
-    speak(plan.say);
+    speak(say);
   } catch (err) {
     els.status.textContent = '出错了';
     els.dispatch.textContent = err.message;
@@ -1401,8 +1455,8 @@ async function maybeAnnounceTransition({ fromId, toId } = {}) {
       body: JSON.stringify({ fromId, toId })
     });
     if (data.say) {
-      els.dispatch.textContent = data.say;
-      speak(data.say);
+      const say = setDispatch(data.say);
+      speak(say);
     }
   } catch (error) {
     console.warn('Auto intro failed:', error);
@@ -1422,6 +1476,8 @@ function setPlaying(value) {
 }
 
 function speak(text) {
+  if (!text) return;
+  text = sanitizeDjCopy(text);
   if (!text) return;
   if (state.ttsStatus?.provider !== 'fish') {
     speakWithBrowser(text);
@@ -1459,10 +1515,18 @@ async function speakWithFish(text, { voiceId } = {}) {
 function speakWithBrowser(text) {
   if (!('speechSynthesis' in window) || !text) return;
   speechSynthesis.cancel();
-  const clean = text.replace(/^Claudio:\s*/, '');
-  const spoken = state.voiceStyle === 'concise'
-    ? (clean.split(/[。！？.!?]/).find(Boolean)?.trim() || clean).slice(0, 80)
-    : clean;
+  const clean = text.replace(/^(?:Claudio|此刻):\s*/i, '');
+  const spoken = {
+    radio: () => {
+      const energized = clean.replace(/。/g, '！').replace(/！{2,}/g, '！');
+      return /^好[，,]/.test(energized) ? energized : `好，${energized}`;
+    },
+    whisper: () => {
+      const softened = clean.replace(/[！!]/g, '。').replace(/[：:]/g, '，').replace(/。/g, '……');
+      return /^嗯[，,]/.test(softened) ? softened : `嗯，${softened}`;
+    },
+    concise: () => (clean.split(/[。！？.!?]/).find(Boolean)?.trim() || clean).slice(0, 46)
+  }[state.voiceStyle]?.() ?? clean;
   const utterance = new SpeechSynthesisUtterance(spoken);
   utterance.lang = 'zh-CN';
   const voice = resolveVoice();
@@ -1471,13 +1535,14 @@ function speakWithBrowser(text) {
     utterance.lang = voice.lang || utterance.lang;
   }
   const voiceStyle = {
-    calm: { rate: 0.95, pitch: 1 },
-    radio: { rate: 1.04, pitch: 1.04 },
-    whisper: { rate: 0.86, pitch: 0.92 },
-    concise: { rate: 1.08, pitch: 1 }
-  }[state.voiceStyle] ?? { rate: 0.95, pitch: 1 };
+    calm: { rate: 1, pitch: 0.96, volume: 0.82 },
+    radio: { rate: 1, pitch: 1.08, volume: 1 },
+    whisper: { rate: 1, pitch: 0.82, volume: 0.48 },
+    concise: { rate: 1, pitch: 1, volume: 0.95 }
+  }[state.voiceStyle] ?? { rate: 1, pitch: 0.96, volume: 0.82 };
   utterance.rate = voiceStyle.rate;
   utterance.pitch = voiceStyle.pitch;
+  utterance.volume = voiceStyle.volume;
   speechSynthesis.speak(utterance);
 }
 
@@ -1833,7 +1898,7 @@ function updateMediaSession() {
   navigator.mediaSession.metadata = new MediaMetadata({
     title: state.current.title,
     artist: state.current.artist,
-    album: state.current.playlistName || state.current.album || 'Claudio'
+    album: state.current.playlistName || state.current.album || '此刻'
   });
   updateMediaSessionPlaybackState();
 }
@@ -2130,32 +2195,7 @@ els.views.profile.addEventListener('click', (event) => {
 
   const test = event.target.closest('[data-test-voice]');
   if (test) {
-    speak('Claudio: 这就是新的 DJ 声音。先别急，我们把声音调到更像一个人在旁边说话。');
-    return;
-  }
-
-  const voicePick = event.target.closest('[data-voice-pick]');
-  if (voicePick) {
-    const voiceId = voicePick.dataset.voicePick;
-    state.fishVoiceId = voiceId;
-    localStorage.setItem('claudio.fishVoiceId', voiceId);
-    // Update card highlights without full re-render for snappier feedback.
-    els.views.profile.querySelectorAll('.fish-voice-card').forEach((card) => {
-      const owned = card.querySelector(`[data-voice-pick="${voiceId}"]`);
-      card.classList.toggle('active', Boolean(owned));
-    });
-    els.status.textContent = '已切换 DJ 声音';
-    return;
-  }
-
-  const voiceSample = event.target.closest('[data-voice-sample]');
-  if (voiceSample) {
-    const voiceId = voiceSample.dataset.voiceSample;
-    const sampleText = '先别急，这会儿先让声音落下来。';
-    speakWithFish(sampleText, { voiceId }).catch((error) => {
-      els.status.textContent = '试听失败';
-      els.dispatch.textContent = error.message;
-    });
+    speak('此刻: 这就是新的 DJ 声音。我少说两句，让它更像一个人在旁边说话。');
     return;
   }
 
@@ -2207,10 +2247,21 @@ els.views.profile.addEventListener('change', (event) => {
     return;
   }
 
+  if (event.target.id === 'fishVoiceSelect') {
+    state.fishVoiceId = event.target.value;
+    localStorage.setItem('claudio.fishVoiceId', state.fishVoiceId);
+    const current = els.views.profile.querySelector('.voice-current');
+    const label = event.target.selectedOptions?.[0]?.textContent?.trim();
+    if (current && label) current.textContent = label;
+    els.status.textContent = 'DJ 声音已保存';
+    return;
+  }
+
   if (event.target.id === 'voiceStyleSelect') {
     state.voiceStyle = event.target.value || 'calm';
     localStorage.setItem('claudio.voiceStyle', state.voiceStyle);
     els.status.textContent = '声音风格已保存';
+    renderProfile().catch(() => {});
     return;
   }
 

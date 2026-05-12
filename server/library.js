@@ -75,7 +75,7 @@ function songFromPath(path, index) {
     url: `/api/audio?id=${encodeURIComponent(id)}`,
     path,
     ext,
-    lyric: ['本地音乐文件', '已从 Claudio 曲库准备好']
+    lyric: ['本地音乐文件', '已从此刻曲库准备好']
   };
 }
 

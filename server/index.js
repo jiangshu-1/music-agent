@@ -56,7 +56,7 @@ export function startServer({ port = Number(process.env.PORT ?? 8080), host = pr
   const app = createAppServer();
   app.server.listen(port, host, () => {
     // Keep startup banner lines human-readable for CLI users.
-    console.log(`Claudio is running at http://127.0.0.1:${port}`);
+    console.log(`此刻 is running at http://127.0.0.1:${port}`);
     for (const address of localAddresses(port)) {
       console.log(`LAN access: ${address.url}`);
     }
