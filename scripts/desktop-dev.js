@@ -10,10 +10,12 @@ function prefix(name, chunk) {
 }
 
 function start(name, command, args, options = {}) {
+  const env = { ...process.env, ...(options.env ?? {}) };
+  if (name === 'electron') delete env.ELECTRON_RUN_AS_NODE;
   const child = spawn(command, args, {
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: process.env,
-    ...options
+    ...options,
+    env
   });
   children.add(child);
   child.stdout.on('data', (chunk) => prefix(name, chunk));

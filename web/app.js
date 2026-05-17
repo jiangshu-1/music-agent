@@ -25,10 +25,7 @@ const state = {
   playbackFailureSongId: '',
   handlingPlaybackFailure: false,
   sleepTimer: null,
-  djAutoIntro: localStorage.getItem('claudio.djAutoIntro') !== '0',
-  djIntroEvery: Number(localStorage.getItem('claudio.djIntroEvery') ?? '3'),
-  djTrackCounter: 0,
-  djLastIntroAt: 0,
+  songBackgroundIntro: localStorage.getItem('claudio.songBackgroundIntro') !== '0',
   crossfadeEnabled: localStorage.getItem('claudio.crossfade') !== '0',
   crossfadeSec: Number(localStorage.getItem('claudio.crossfadeSec') ?? '3'),
   crossfadeInterval: null,
@@ -129,6 +126,55 @@ function escapeHtml(value) {
 
 function displayAlbum(album) {
   return album === 'Local Files' ? '本地曲库' : album;
+}
+
+function applyDjSettings(settings = {}) {
+  if (typeof settings.voiceStyle === 'string') {
+    state.voiceStyle = settings.voiceStyle || 'calm';
+    localStorage.setItem('claudio.voiceStyle', state.voiceStyle);
+  }
+  if (typeof settings.fishVoiceId === 'string') {
+    state.fishVoiceId = settings.fishVoiceId;
+    localStorage.setItem('claudio.fishVoiceId', state.fishVoiceId);
+  }
+  if (typeof settings.songBackgroundIntro === 'boolean') {
+    state.songBackgroundIntro = settings.songBackgroundIntro;
+    localStorage.setItem('claudio.songBackgroundIntro', state.songBackgroundIntro ? '1' : '0');
+  }
+}
+
+async function loadDjSettings() {
+  try {
+    const settings = await api('/api/dj/settings');
+    if (settings.saved === false) {
+      await saveDjSettings({
+        voiceStyle: state.voiceStyle,
+        fishVoiceId: state.fishVoiceId,
+        songBackgroundIntro: state.songBackgroundIntro
+      });
+      return;
+    }
+    applyDjSettings(settings);
+  } catch {
+    // Keep local settings when the server is older or temporarily unavailable.
+  }
+}
+
+async function saveDjSettings(partial = {}) {
+  applyDjSettings(partial);
+  try {
+    applyDjSettings(await api('/api/dj/settings', {
+      method: 'POST',
+      body: JSON.stringify({
+        voiceStyle: state.voiceStyle,
+        fishVoiceId: state.fishVoiceId,
+        songBackgroundIntro: state.songBackgroundIntro,
+        ...partial
+      })
+    }));
+  } catch (error) {
+    console.warn('DJ settings sync failed:', error);
+  }
 }
 
 function renderSleepTimerInfoHtml() {
@@ -611,14 +657,10 @@ async function renderProfile() {
     ${renderHealthPanel(health)}
     ${renderInsightsPanel(insights)}
     <div class="dj-auto-panel">
-      <p class="label">DJ 自动转场</p>
+      <p class="label">歌曲背景播报</p>
       <label class="switch-row">
-        <input type="checkbox" id="djAutoIntroToggle" ${state.djAutoIntro ? 'checked' : ''}>
-        <span>连续听时自动加一句过渡播报</span>
-      </label>
-      <label class="switch-row">
-        <span>每 ${state.djIntroEvery} 首播报一次</span>
-        <input type="range" id="djIntroEveryRange" min="2" max="8" value="${state.djIntroEvery}">
+        <input type="checkbox" id="songBackgroundIntroToggle" ${state.songBackgroundIntro ? 'checked' : ''}>
+        <span>每首歌开始前，先说一句歌曲背景</span>
       </label>
       <label class="switch-row">
         <input type="checkbox" id="crossfadeToggle" ${state.crossfadeEnabled ? 'checked' : ''}>
@@ -1247,6 +1289,7 @@ async function boot() {
     state.queue = data.queue || [];
     state.stations = stations.stations ?? [];
     state.preferenceSummary = data.preferenceSummary ?? null;
+    await loadDjSettings();
     
     if (data.current) {
       renderSong(data.current);
@@ -1300,6 +1343,11 @@ async function boot() {
           if (msg.action === 'pause') setPlaying(false);
           else if (msg.action === 'play') setPlaying(true);
           else if (msg.action === 'toggle') setPlaying(!state.playing);
+          return;
+        }
+        if (msg.type === 'dj-settings' && msg.sourceClientId !== getClientId()) {
+          applyDjSettings(msg.settings);
+          renderProfile().catch(() => {});
           return;
         }
         if (msg.type === 'plan') {
@@ -1422,6 +1470,7 @@ async function playSong(id) {
   });
   renderSong(data.current);
   await renderLyrics();
+  await announceSongBackground(data.current?.id);
   setPlaying(true);
 }
 
@@ -1433,33 +1482,26 @@ async function nextSong() {
   }
   const fromId = state.current?.id;
   const data = await api('/api/next', { method: 'POST', body: '{}' });
-  await maybeAnnounceTransition({ fromId, toId: data.current?.id });
   renderSong(data.current);
   await renderLyrics();
+  await announceSongBackground(data.current?.id, { fromId });
   setPlaying(true);
 }
 
-async function maybeAnnounceTransition({ fromId, toId } = {}) {
-  if (!state.djAutoIntro || !toId || fromId === toId) return;
-  state.djTrackCounter += 1;
-  const every = Math.max(1, state.djIntroEvery | 0);
-  const now = Date.now();
-  const minGapMs = 60_000;
-  if (state.djTrackCounter < every) return;
-  if (now - state.djLastIntroAt < minGapMs) return;
-  state.djTrackCounter = 0;
-  state.djLastIntroAt = now;
+async function announceSongBackground(songId, { fromId } = {}) {
+  if (!state.songBackgroundIntro || !songId || fromId === songId) return;
   try {
-    const data = await api('/api/dj/intro', {
+    const data = await api('/api/dj/background', {
       method: 'POST',
-      body: JSON.stringify({ fromId, toId })
+      body: JSON.stringify({ songId })
     });
     if (data.say) {
       const say = setDispatch(data.say);
-      speak(say);
+      els.status.textContent = '歌曲背景';
+      await speak(say);
     }
   } catch (error) {
-    console.warn('Auto intro failed:', error);
+    console.warn('Song background intro failed:', error);
   }
 }
 
@@ -1476,21 +1518,20 @@ function setPlaying(value) {
 }
 
 function speak(text) {
-  if (!text) return;
+  if (!text) return Promise.resolve();
   text = sanitizeDjCopy(text);
-  if (!text) return;
+  if (!text) return Promise.resolve();
   if (state.ttsStatus?.provider !== 'fish') {
-    speakWithBrowser(text);
-    return;
+    return speakWithBrowser(text);
   }
 
   els.status.textContent = 'DJ 朗读中';
-  speakWithFish(text).then(() => {
+  return speakWithFish(text).then(() => {
     els.status.textContent = '朗读完成';
   }).catch((error) => {
     els.status.textContent = 'Fish 语音失败，改用浏览器朗读';
     console.warn('Fish TTS failed:', error);
-    speakWithBrowser(text);
+    return speakWithBrowser(text);
   });
 }
 
@@ -1508,12 +1549,17 @@ async function speakWithFish(text, { voiceId } = {}) {
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);
   const audio = new Audio(url);
+  const finished = new Promise((resolve) => {
+    audio.addEventListener('ended', resolve, { once: true });
+    audio.addEventListener('error', resolve, { once: true });
+  });
   audio.addEventListener('ended', () => URL.revokeObjectURL(url), { once: true });
   await audio.play();
+  await finished;
 }
 
 function speakWithBrowser(text) {
-  if (!('speechSynthesis' in window) || !text) return;
+  if (!('speechSynthesis' in window) || !text) return Promise.resolve();
   speechSynthesis.cancel();
   const clean = text.replace(/^(?:Claudio|此刻):\s*/i, '');
   const spoken = {
@@ -1543,7 +1589,11 @@ function speakWithBrowser(text) {
   utterance.rate = voiceStyle.rate;
   utterance.pitch = voiceStyle.pitch;
   utterance.volume = voiceStyle.volume;
-  speechSynthesis.speak(utterance);
+  return new Promise((resolve) => {
+    utterance.onend = resolve;
+    utterance.onerror = resolve;
+    speechSynthesis.speak(utterance);
+  });
 }
 
 function resolveVoice() {
@@ -1959,6 +2009,18 @@ els.volume.addEventListener('input', (event) => {
   localStorage.setItem('claudio.volume', String(volume));
 });
 
+window.addEventListener('storage', (event) => {
+  if (event.key === 'claudio.songBackgroundIntro') {
+    state.songBackgroundIntro = event.newValue !== '0';
+  }
+  if (event.key === 'claudio.voiceStyle') {
+    state.voiceStyle = event.newValue || 'calm';
+  }
+  if (event.key === 'claudio.fishVoiceId') {
+    state.fishVoiceId = event.newValue || '';
+  }
+});
+
 els.voice.addEventListener('click', () => speak(els.dispatch.textContent));
 els.cast.addEventListener('click', castToSpeaker);
 
@@ -2209,17 +2271,9 @@ els.views.profile.addEventListener('click', (event) => {
 });
 
 els.views.profile.addEventListener('change', (event) => {
-  if (event.target.id === 'djAutoIntroToggle') {
-    state.djAutoIntro = event.target.checked;
-    localStorage.setItem('claudio.djAutoIntro', state.djAutoIntro ? '1' : '0');
-    els.status.textContent = state.djAutoIntro ? 'DJ 自动播报已开' : 'DJ 自动播报已关';
-    return;
-  }
-  if (event.target.id === 'djIntroEveryRange') {
-    state.djIntroEvery = Number(event.target.value) || 3;
-    localStorage.setItem('claudio.djIntroEvery', String(state.djIntroEvery));
-    const infoLabel = event.target.parentElement?.querySelector('span');
-    if (infoLabel) infoLabel.textContent = `每 ${state.djIntroEvery} 首播报一次`;
+  if (event.target.id === 'songBackgroundIntroToggle') {
+    saveDjSettings({ songBackgroundIntro: event.target.checked });
+    els.status.textContent = event.target.checked ? '歌曲背景播报已开' : '歌曲背景播报已关';
     return;
   }
   if (event.target.id === 'crossfadeToggle') {
@@ -2248,8 +2302,7 @@ els.views.profile.addEventListener('change', (event) => {
   }
 
   if (event.target.id === 'fishVoiceSelect') {
-    state.fishVoiceId = event.target.value;
-    localStorage.setItem('claudio.fishVoiceId', state.fishVoiceId);
+    saveDjSettings({ fishVoiceId: event.target.value });
     const current = els.views.profile.querySelector('.voice-current');
     const label = event.target.selectedOptions?.[0]?.textContent?.trim();
     if (current && label) current.textContent = label;
@@ -2258,8 +2311,7 @@ els.views.profile.addEventListener('change', (event) => {
   }
 
   if (event.target.id === 'voiceStyleSelect') {
-    state.voiceStyle = event.target.value || 'calm';
-    localStorage.setItem('claudio.voiceStyle', state.voiceStyle);
+    saveDjSettings({ voiceStyle: event.target.value || 'calm' });
     els.status.textContent = '声音风格已保存';
     renderProfile().catch(() => {});
     return;

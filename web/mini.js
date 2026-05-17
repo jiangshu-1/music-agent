@@ -16,6 +16,9 @@ const state = {
   lyrics: [],
   activeLyricIndex: -1,
   lyricRequestId: 0,
+  voiceStyle: localStorage.getItem('claudio.voiceStyle') ?? 'calm',
+  fishVoiceId: localStorage.getItem('claudio.fishVoiceId') ?? '',
+  songBackgroundIntro: localStorage.getItem('claudio.songBackgroundIntro') !== '0',
   crossfadeEnabled: localStorage.getItem('claudio.crossfade') !== '0',
   crossfadeSec: Number(localStorage.getItem('claudio.crossfadeSec') ?? '3'),
   crossfadeInterval: null,
@@ -164,6 +167,30 @@ function formatTime(seconds) {
   return `${minutes}:${rest}`;
 }
 
+function applyDjSettings(settings = {}) {
+  if (typeof settings.voiceStyle === 'string') {
+    state.voiceStyle = settings.voiceStyle || 'calm';
+    localStorage.setItem('claudio.voiceStyle', state.voiceStyle);
+  }
+  if (typeof settings.fishVoiceId === 'string') {
+    state.fishVoiceId = settings.fishVoiceId;
+    localStorage.setItem('claudio.fishVoiceId', state.fishVoiceId);
+  }
+  if (typeof settings.songBackgroundIntro === 'boolean') {
+    state.songBackgroundIntro = settings.songBackgroundIntro;
+    localStorage.setItem('claudio.songBackgroundIntro', state.songBackgroundIntro ? '1' : '0');
+  }
+}
+
+async function loadDjSettings() {
+  try {
+    const settings = await api('/api/dj/settings');
+    if (settings.saved !== false) applyDjSettings(settings);
+  } catch {
+    // Keep local settings when the server is older or temporarily unavailable.
+  }
+}
+
 function normalizeLyricLine(line, index) {
   if (typeof line === 'string') return { time: null, text: line.trim(), index };
   return {
@@ -305,6 +332,10 @@ async function boot() {
 
   try {
     state.ttsStatus = await api('/api/tts/status');
+    await loadDjSettings();
+    if (!state.fishVoiceId && state.ttsStatus?.defaultVoiceId) {
+      state.fishVoiceId = state.ttsStatus.defaultVoiceId;
+    }
   } catch {
     state.ttsStatus = null;
   }
@@ -422,6 +453,11 @@ function connectWebSocket() {
           else if (msg.action === 'toggle') setPlaying(!state.playing);
           return;
         }
+        if (msg.type === 'dj-settings' && msg.sourceClientId !== getClientId()) {
+          applyDjSettings(msg.settings);
+          setStatus('DJ 声音已同步', 'ready');
+          return;
+        }
         if (msg.type === 'plan' && msg.queue?.length) {
           state.queue = msg.queue;
           renderSong(msg.queue[0]);
@@ -510,6 +546,7 @@ async function playSong(id) {
   });
   renderSong(data.current);
   renderQueuePreview();
+  await announceSongBackground(data.current?.id);
   setPlaying(true);
 }
 
@@ -523,6 +560,7 @@ async function nextSong() {
   state.queue = data.queue ?? state.queue;
   renderSong(data.current);
   renderQueuePreview();
+  await announceSongBackground(data.current?.id);
   setPlaying(true);
 }
 
@@ -747,38 +785,87 @@ function seekToProgress(value) {
   updateTransport();
 }
 
-function speak(text) {
-  if (!text) return;
-  text = sanitizeDjCopy(text);
-  if (!text) return;
-  if (state.ttsStatus?.provider === 'fish') {
-    speakWithFish(text).catch(() => speakWithBrowser(text));
-  } else {
-    speakWithBrowser(text);
+async function announceSongBackground(songId) {
+  if (!state.songBackgroundIntro || !songId) return;
+  try {
+    const data = await api('/api/dj/background', {
+      method: 'POST',
+      body: JSON.stringify({ songId })
+    });
+    if (data.say) {
+      const say = setDispatch(data.say);
+      setStatus('歌曲背景', 'ready');
+      await speak(say);
+    }
+  } catch (error) {
+    console.warn('Song background intro failed:', error);
   }
+}
+
+function speak(text) {
+  if (!text) return Promise.resolve();
+  text = sanitizeDjCopy(text);
+  if (!text) return Promise.resolve();
+  if (state.ttsStatus?.provider === 'fish') {
+    return speakWithFish(text).catch(() => speakWithBrowser(text));
+  }
+  return speakWithBrowser(text);
 }
 
 async function speakWithFish(text) {
   const response = await fetch('/api/tts', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ text, style: 'calm' })
+    body: JSON.stringify({
+      text,
+      style: state.voiceStyle,
+      voiceId: state.fishVoiceId || undefined
+    })
   });
   if (!response.ok) throw new Error(`朗读失败 ${response.status}`);
   const blob = await response.blob();
   const url = URL.createObjectURL(blob);
   const audio = new Audio(url);
+  const finished = new Promise((resolve) => {
+    audio.addEventListener('ended', resolve, { once: true });
+    audio.addEventListener('error', resolve, { once: true });
+  });
   audio.addEventListener('ended', () => URL.revokeObjectURL(url), { once: true });
   await audio.play();
+  await finished;
 }
 
 function speakWithBrowser(text) {
-  if (!('speechSynthesis' in window) || !text) return;
+  if (!('speechSynthesis' in window) || !text) return Promise.resolve();
   speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text.replace(/^(?:Claudio|此刻):\s*/i, ''));
+  const clean = text.replace(/^(?:Claudio|此刻):\s*/i, '');
+  const spoken = {
+    radio: () => {
+      const energized = clean.replace(/。/g, '！').replace(/！{2,}/g, '！');
+      return /^好[，,]/.test(energized) ? energized : `好，${energized}`;
+    },
+    whisper: () => {
+      const softened = clean.replace(/[！!]/g, '。').replace(/[：:]/g, '，').replace(/。/g, '……');
+      return /^嗯[，,]/.test(softened) ? softened : `嗯，${softened}`;
+    },
+    concise: () => (clean.split(/[。！？.!?]/).find(Boolean)?.trim() || clean).slice(0, 46)
+  }[state.voiceStyle]?.() ?? clean;
+  const utterance = new SpeechSynthesisUtterance(spoken);
   utterance.lang = 'zh-CN';
-  utterance.rate = 0.95;
-  speechSynthesis.speak(utterance);
+  const voiceStyle = {
+    calm: { rate: 1, pitch: 0.96, volume: 0.82 },
+    radio: { rate: 1, pitch: 1.08, volume: 1 },
+    whisper: { rate: 1, pitch: 0.82, volume: 0.48 },
+    concise: { rate: 1, pitch: 1, volume: 0.95 }
+  }[state.voiceStyle] ?? { rate: 1, pitch: 0.96, volume: 0.82 };
+  utterance.rate = voiceStyle.rate;
+  utterance.pitch = voiceStyle.pitch;
+  utterance.volume = voiceStyle.volume;
+  return new Promise((resolve) => {
+    utterance.onend = resolve;
+    utterance.onerror = resolve;
+    speechSynthesis.speak(utterance);
+  });
 }
 
 function updateMediaSession() {
@@ -844,6 +931,18 @@ els.volume.addEventListener('input', (event) => {
   }
   state.player.volume = volume;
   localStorage.setItem('claudio.volume', String(volume));
+});
+
+window.addEventListener('storage', (event) => {
+  if (event.key === 'claudio.songBackgroundIntro') {
+    state.songBackgroundIntro = event.newValue !== '0';
+  }
+  if (event.key === 'claudio.voiceStyle') {
+    state.voiceStyle = event.newValue || 'calm';
+  }
+  if (event.key === 'claudio.fishVoiceId') {
+    state.fishVoiceId = event.newValue || '';
+  }
 });
 
 els.feedback.forEach((button) => {

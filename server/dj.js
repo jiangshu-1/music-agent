@@ -68,6 +68,65 @@ export function djIntroForTransition({ fromId, toId } = {}) {
   };
 }
 
+const knownSongBackgrounds = {
+  'M83::Midnight City': '《Midnight City》收在 M83 2011 年的专辑《Hurry Up, We Are Dreaming》里，像一段夜路突然亮起来。',
+  'Tycho::A Walk': '《A Walk》来自 Tycho 2011 年的专辑《Dive》，声音不抢人，适合把注意力慢慢铺开。',
+  'RUFUS DU SOL::Innerbloom': '《Innerbloom》来自 RUFUS DU SOL 2016 年的专辑《Bloom》，它不是急着推进的歌，更像一段慢慢打开的长呼吸。',
+  'Bicep::Glue': '《Glue》收在 Bicep 2017 年的同名专辑里，带着一点旧 rave 记忆，但整体很克制。',
+  'Aphex Twin::Avril 14th': '《Avril 14th》来自 Aphex Twin 2001 年的专辑《Drukqs》，很短，很安静，像一段被单独留下来的钢琴片刻。',
+  'The xx::On Hold': '《On Hold》来自 The xx 2017 年的专辑《I See You》，这首歌把旧情绪放进了更明亮的节拍里。'
+};
+
+function knownBackgroundFor(song) {
+  return knownSongBackgrounds[`${song.artist}::${song.title}`] ?? null;
+}
+
+function lyricCreditLine(song) {
+  const lines = (song.lyric ?? [])
+    .map((line) => typeof line === 'string' ? line : line?.text)
+    .filter(Boolean);
+  const writer = lines.find((line) => /^作词\s*[:：]/.test(line));
+  const composer = lines.find((line) => /^作曲\s*[:：]/.test(line));
+  const credits = [writer, composer]
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+  return credits.length ? credits.join('，') : '';
+}
+
+function sourceLine(song) {
+  if (song.provider === 'netease') {
+    const album = song.album && song.album !== 'NetEase' ? `，收在《${song.album}》` : '';
+    const playlist = song.playlistName ? `，你是从「${song.playlistName}」这张歌单里导进来的` : '';
+    const credits = lyricCreditLine(song);
+    return `这首是 ${song.artist} 的《${song.title}》${album}${playlist}${credits ? `，${credits}` : ''}。`;
+  }
+
+  if (song.source === 'local') {
+    const note = song.note ? `你给它留过一句备注：${song.note}。` : '它来自你自己的本地曲库。';
+    return `这首是 ${song.artist} 的《${song.title}》，${note}`;
+  }
+
+  const album = song.album ? `，收在《${song.album}》` : '';
+  return `这首是 ${song.artist} 的《${song.title}》${album}。`;
+}
+
+export function buildSongBackgroundIntro({ song } = {}) {
+  if (!song) return null;
+  const known = knownBackgroundFor(song);
+  if (known) return sanitizeDjLine(known);
+
+  return sanitizeDjLine(`${sourceLine(song)}创作年份先不乱编。`);
+}
+
+export function djBackgroundForSong({ songId } = {}) {
+  const song = songId ? getSong(songId) : null;
+  if (!song) return null;
+  return {
+    say: buildSongBackgroundIntro({ song }),
+    song: toClientSong(song)
+  };
+}
+
 // When the user switches stations (e.g. focus → late night), we want the DJ
 // to briefly acknowledge the shift with a small, human line. These are hand
 // written because templates are what make it feel like the DJ knows the room.
